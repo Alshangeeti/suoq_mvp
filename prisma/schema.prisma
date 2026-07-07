@@ -1,0 +1,34 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Product {
+  id       Int     @id @default(autoincrement())
+  nameAr   String
+  nameFr   String
+  descAr   String
+  descFr   String
+  priceMru Int
+  category String
+  emoji    String
+  stocked  Boolean @default(false)
+}
+
+model Order {
+  id           Int       @id @default(autoincrement())
+  ref          String    @unique
+  customerName String
+  phone        String
+  city         String
+  address      String
+  totalMru     Int
+  status       String    @default("PENDING_PAYMENT")
+  itemsJson    String
+  createdAt    DateTime  @default(now())
+  paidAt       DateTime?
+}
