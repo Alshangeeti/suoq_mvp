@@ -1,0 +1,31 @@
+import "./globals.css";
+import { StoreProvider } from "../lib/store";
+import Header from "../components/Header";
+
+export const metadata = {
+  title: "Souq Mauritania — سوق موريتانيا",
+  description: "Shop from China & the world, pay with Bankily in MRU."
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="ar" dir="rtl">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="bg-souq-sand text-souq-ink min-h-screen">
+        <StoreProvider>
+          <Header />
+          <main className="max-w-5xl mx-auto px-4 pb-20">{children}</main>
+          <footer className="bg-souq-deep text-souq-goldlight text-center py-6 text-sm">
+            Souq Mauritania © 2026 — Guangzhou ⇄ Nouakchott
+          </footer>
+        </StoreProvider>
+      </body>
+    </html>
+  );
+}
