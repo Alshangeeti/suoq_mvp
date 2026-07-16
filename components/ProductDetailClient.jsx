@@ -5,6 +5,45 @@ import { useStore } from "../lib/store";
 import ProductCard from "./ProductCard";
 import RecentlyViewed from "./RecentlyViewed";
 
+function ProductGallery({ product, name }) {
+  let images = [];
+  try {
+    images = JSON.parse(product.imagesJson || "[]");
+  } catch {}
+  if (product.imageUrl && !images.includes(product.imageUrl)) images.unshift(product.imageUrl);
+  const [active, setActive] = useState(0);
+
+  if (images.length === 0) {
+    return (
+      <div className="bg-gradient-to-br from-souq-green/10 to-souq-gold/20 rounded-3xl flex items-center justify-center text-[10rem] min-h-[280px]">
+        {product.emoji}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="bg-white rounded-3xl border border-souq-goldlight/60 overflow-hidden min-h-[280px] flex items-center justify-center">
+        <img src={images[active]} alt={name} className="w-full h-full object-contain max-h-[380px]" />
+      </div>
+      {images.length > 1 && (
+        <div className="flex gap-2 mt-3 overflow-x-auto">
+          {images.map((u, i) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 ${i === active ? "border-souq-green" : "border-souq-goldlight/60"}`}
+              aria-label={`image ${i + 1}`}
+            >
+              <img src={u} alt="" loading="lazy" className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ProductDetailClient({ product, related }) {
   const { t, lang, addToCart } = useStore();
   const [qty, setQty] = useState(1);
@@ -62,9 +101,7 @@ export default function ProductDetailClient({ product, related }) {
       </nav>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-souq-green/10 to-souq-gold/20 rounded-3xl flex items-center justify-center text-[10rem] min-h-[280px]">
-          {product.emoji}
-        </div>
+        <ProductGallery product={product} name={name} />
 
         <div>
           <h1 className="text-2xl md:text-3xl font-black leading-snug">{name}</h1>

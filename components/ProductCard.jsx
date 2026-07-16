@@ -21,8 +21,12 @@ export default function ProductCard({ p }) {
   const desc = lang === "ar" ? p.descAr : p.descFr;
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-souq-goldlight/60 overflow-hidden flex flex-col hover:border-souq-gold hover:shadow-md transition">
-      <Link href={`/product/${p.id}`} className="block h-36 bg-gradient-to-br from-souq-green/10 to-souq-gold/20 flex items-center justify-center text-6xl">
-        {p.emoji}
+      <Link href={`/product/${p.id}`} className="block h-36 bg-gradient-to-br from-souq-green/10 to-souq-gold/20 flex items-center justify-center text-6xl overflow-hidden">
+        {p.imageUrl ? (
+          <img src={p.imageUrl} alt={name} loading="lazy" className="w-full h-full object-cover" />
+        ) : (
+          p.emoji
+        )}
       </Link>
       <div className="p-4 flex flex-col gap-2 flex-1">
         <Link href={`/product/${p.id}`}>

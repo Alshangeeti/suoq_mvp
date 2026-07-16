@@ -14,8 +14,23 @@ function cleanProduct(body) {
   const category = CATEGORIES.includes(body.category) ? body.category : "home";
   const emoji = String(body.emoji || "📦").slice(0, 8);
   const stocked = !!body.stocked;
+  const imageUrl = String(body.imageUrl || "").trim().slice(0, 500) || null;
+  let imagesJson = "[]";
+  if (Array.isArray(body.images)) {
+    imagesJson = JSON.stringify(
+      body.images.filter((u) => typeof u === "string" && u.startsWith("http")).slice(0, 6)
+    );
+  }
+  const aliexpressId = String(body.aliexpressId || "").trim().slice(0, 30) || null;
+  const costUsd = body.costUsd !== undefined && body.costUsd !== null && body.costUsd !== ""
+    ? parseFloat(body.costUsd)
+    : null;
   if (!nameAr || !nameFr || Number.isNaN(priceMru) || priceMru <= 0) return null;
-  return { nameAr, nameFr, descAr, descFr, priceMru, category, emoji, stocked };
+  return {
+    nameAr, nameFr, descAr, descFr, priceMru, category, emoji, stocked,
+    imageUrl, imagesJson, aliexpressId,
+    costUsd: costUsd !== null && !Number.isNaN(costUsd) ? costUsd : null
+  };
 }
 
 export async function POST(req) {

@@ -29,6 +29,10 @@ export default function AdminPage() {
   const [rejecting, setRejecting] = useState(null); // order ref being rejected
   const [rejectReason, setRejectReason] = useState("PAYMENT_NOT_COMPLETED");
   const [rejectNote, setRejectNote] = useState("");
+  const [aeUrl, setAeUrl] = useState("");
+  const [aePreview, setAePreview] = useState(null);
+  const [aeError, setAeError] = useState("");
+  const [aeBusy, setAeBusy] = useState(false);
 
   const load = async (k = key) => {
     setError("");
@@ -56,6 +60,39 @@ export default function AdminPage() {
     setRejecting(null);
     setRejectNote("");
     setRejectReason("PAYMENT_NOT_COMPLETED");
+  };
+
+  const fetchAePreview = async () => {
+    setAeError("");
+    setAePreview(null);
+    setAeBusy(true);
+    try {
+      const res = await fetch("/api/admin/aliexpress", {
+        method: "POST",
+        headers: { "x-admin-key": key, "Content-Type": "application/json" },
+        body: JSON.stringify({ url: aeUrl })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setAePreview(data);
+      // Pre-fill the product form from the preview
+      setForm({
+        ...EMPTY_PRODUCT,
+        nameFr: data.title || "",
+        nameAr: "",
+        descFr: data.title || "",
+        descAr: "",
+        priceMru: "",
+        imageUrl: data.images && data.images[0] ? data.images[0] : "",
+        images: data.images || [],
+        aliexpressId: data.productId,
+        costUsd: data.minPriceUsd || ""
+      });
+    } catch (e) {
+      setAeError(String(e.message || e));
+    } finally {
+      setAeBusy(false);
+    }
   };
 
   const saveProduct = async () => {
@@ -269,6 +306,47 @@ export default function AdminPage() {
 
       {tab === "products" && (
         <div className="space-y-6">
+          <div className="bg-white rounded-2xl border-2 border-souq-gold/60 p-4">
+            <h2 className="font-black mb-1">🔗 Import from AliExpress</h2>
+            <p className="text-xs text-souq-ink/60 mb-3">
+              Paste a product link — title, photos and cost auto-fill below. Set your MRU price and Arabic name, then add.
+              {" "}<a href="/callback" className="underline font-bold">Connection status</a>
+            </p>
+            <div className="flex gap-2">
+              <input
+                value={aeUrl}
+                onChange={(e) => setAeUrl(e.target.value)}
+                placeholder="https://www.aliexpress.com/item/100500...html"
+                className="flex-1 rounded-xl border border-souq-goldlight px-3 py-2 text-sm"
+                dir="ltr"
+              />
+              <button
+                disabled={aeBusy || !aeUrl.trim()}
+                onClick={fetchAePreview}
+                className="bg-souq-gold text-souq-deep font-bold rounded-xl px-5 py-2 disabled:opacity-50"
+              >
+                {aeBusy ? "..." : "Fetch"}
+              </button>
+            </div>
+            {aeError && <p className="text-red-600 text-sm font-bold mt-2 whitespace-pre-wrap">{aeError}</p>}
+            {aePreview && (
+              <div className="mt-3 flex flex-wrap items-center gap-3 bg-souq-sand rounded-xl p-3">
+                {aePreview.images && aePreview.images[0] && (
+                  <img src={aePreview.images[0]} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                )}
+                <div className="flex-1 min-w-[150px]">
+                  <p className="text-sm font-bold leading-snug">{aePreview.title}</p>
+                  <p className="text-xs text-souq-ink/60 mt-0.5">
+                    Cost: {aePreview.minPriceUsd != null ? `$${aePreview.minPriceUsd}` : "?"}
+                    {aePreview.maxPriceUsd != null && aePreview.maxPriceUsd !== aePreview.minPriceUsd ? ` – $${aePreview.maxPriceUsd}` : ""}
+                    {" · "}{aePreview.images ? aePreview.images.length : 0} photos · ID {aePreview.productId}
+                  </p>
+                  <p className="text-xs text-souq-green font-bold mt-1">✓ Form below pre-filled — set price &amp; Arabic name, then Add product</p>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white rounded-2xl border border-souq-goldlight/60 p-4">
             <h2 className="font-black mb-3">{form.id ? `Edit product #${form.id}` : "Add product"}</h2>
             <div className="grid md:grid-cols-2 gap-3">
@@ -306,7 +384,11 @@ export default function AdminPage() {
           <div className="space-y-2">
             {products.map((p) => (
               <div key={p.id} className="bg-white rounded-2xl border border-souq-goldlight/60 p-3 flex items-center gap-3">
-                <span className="text-3xl">{p.emoji}</span>
+                {p.imageUrl ? (
+                  <img src={p.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                ) : (
+                  <span className="text-3xl">{p.emoji}</span>
+                )}
                 <div className="flex-1">
                   <p className="font-bold text-sm">{p.nameFr} · {p.nameAr}</p>
                   <p className="text-xs text-souq-ink/50">{p.category} · {p.stocked ? "stocked" : "on-demand"}</p>

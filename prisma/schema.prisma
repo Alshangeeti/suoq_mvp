@@ -8,15 +8,19 @@ generator client {
 }
 
 model Product {
-  id       Int     @id @default(autoincrement())
-  nameAr   String
-  nameFr   String
-  descAr   String
-  descFr   String
-  priceMru Int
-  category String
-  emoji    String
-  stocked  Boolean @default(false)
+  id           Int     @id @default(autoincrement())
+  nameAr       String
+  nameFr       String
+  descAr       String
+  descFr       String
+  priceMru     Int
+  category     String
+  emoji        String
+  stocked      Boolean @default(false)
+  imageUrl     String?
+  imagesJson   String  @default("[]")
+  aliexpressId String?
+  costUsd      Float?
 }
 
 model Customer {
