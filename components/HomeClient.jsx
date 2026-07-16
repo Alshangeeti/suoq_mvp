@@ -5,10 +5,10 @@ import ProductCard from "./ProductCard";
 
 const CATS = ["all", "electronics", "home", "fashion", "beauty"];
 
-export default function HomeClient({ products = [], loadError = false }) {
+export default function HomeClient({ products = [], loadError = false, initialCat = "all", initialQuery = "" }) {
   const { t } = useStore();
-  const [cat, setCat] = useState("all");
-  const [query, setQuery] = useState("");
+  const [cat, setCat] = useState(CATS.includes(initialCat) ? initialCat : "all");
+  const [query, setQuery] = useState(initialQuery);
 
   const byCat = cat === "all" ? products : products.filter((p) => p.category === cat);
   const q = query.trim().toLowerCase();

@@ -4,7 +4,7 @@ import HomeClient from "../components/HomeClient";
 
 // Server-rendered homepage: products arrive in the initial HTML (faster
 // first paint, crawlable content) instead of a client-side fetch.
-export default async function Home() {
+export default async function Home({ searchParams }) {
   let products = [];
   let loadError = false;
   try {
@@ -42,7 +42,12 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <HomeClient products={products} loadError={loadError} />
+      <HomeClient
+        products={products}
+        loadError={loadError}
+        initialCat={searchParams?.cat || "all"}
+        initialQuery={searchParams?.q || ""}
+      />
     </>
   );
 }

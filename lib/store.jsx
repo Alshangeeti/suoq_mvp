@@ -69,11 +69,12 @@ export function StoreProvider({ children }) {
 
   const t = (k) => dict[lang][k] || k;
 
-  const addToCart = (product) =>
+  const addToCart = (product, qty = 1) =>
     setCart((c) => {
+      const n = Math.max(1, Math.min(99, qty | 0));
       const found = c.find((i) => i.id === product.id);
-      if (found) return c.map((i) => (i.id === product.id ? { ...i, qty: i.qty + 1 } : i));
-      return [...c, { id: product.id, nameAr: product.nameAr, nameFr: product.nameFr, priceMru: product.priceMru, emoji: product.emoji, qty: 1 }];
+      if (found) return c.map((i) => (i.id === product.id ? { ...i, qty: Math.min(99, i.qty + n) } : i));
+      return [...c, { id: product.id, nameAr: product.nameAr, nameFr: product.nameFr, priceMru: product.priceMru, emoji: product.emoji, qty: n }];
     });
 
   const setQty = (id, qty) =>

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useStore } from "../lib/store";
 
 export default function ProductCard({ p }) {
@@ -19,12 +20,14 @@ export default function ProductCard({ p }) {
   const name = lang === "ar" ? p.nameAr : p.nameFr;
   const desc = lang === "ar" ? p.descAr : p.descFr;
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-souq-goldlight/60 overflow-hidden flex flex-col">
-      <div className="h-36 bg-gradient-to-br from-souq-green/10 to-souq-gold/20 flex items-center justify-center text-6xl">
+    <div className="bg-white rounded-2xl shadow-sm border border-souq-goldlight/60 overflow-hidden flex flex-col hover:border-souq-gold hover:shadow-md transition">
+      <Link href={`/product/${p.id}`} className="block h-36 bg-gradient-to-br from-souq-green/10 to-souq-gold/20 flex items-center justify-center text-6xl">
         {p.emoji}
-      </div>
+      </Link>
       <div className="p-4 flex flex-col gap-2 flex-1">
-        <h3 className="font-bold leading-snug">{name}</h3>
+        <Link href={`/product/${p.id}`}>
+          <h3 className="font-bold leading-snug hover:text-souq-green">{name}</h3>
+        </Link>
         <p className="text-sm text-souq-ink/60 flex-1">{desc}</p>
         <span
           className={`text-xs font-semibold rounded-full px-2 py-0.5 w-fit ${
