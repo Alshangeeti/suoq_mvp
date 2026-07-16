@@ -46,25 +46,46 @@ export default function AdminPage() {
         <button onClick={() => load()} className="text-sm font-bold text-souq-green">↻ Refresh</button>
       </div>
       <div className="space-y-3">
-        {orders.map((o) => (
-          <div key={o.ref} className="bg-white rounded-2xl border border-souq-goldlight/60 p-4 flex flex-wrap items-center gap-3">
-            <span className="font-mono font-bold">{o.ref}</span>
-            <span className="flex-1 text-sm">{o.customerName} · {o.phone} · {o.city}</span>
-            <span className="font-black text-souq-green">{o.totalMru.toLocaleString()} MRU</span>
-            <span
-              className={`text-xs font-bold rounded-full px-3 py-1 ${
-                o.status === "PAID" ? "bg-souq-green text-white" : "bg-souq-gold/30 text-souq-deep"
-              }`}
-            >
-              {o.status}
-            </span>
-            {o.status !== "PAID" && (
-              <button onClick={() => markPaid(o.ref)} className="text-xs font-bold border border-souq-green text-souq-green rounded-full px-3 py-1">
-                Mark paid
-              </button>
-            )}
-          </div>
-        ))}
+        {orders.map((o) => {
+          let items = [];
+          try {
+            items = JSON.parse(o.itemsJson || "[]");
+          } catch {}
+          return (
+            <div key={o.ref} className="bg-white rounded-2xl border border-souq-goldlight/60 p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-mono font-bold">{o.ref}</span>
+                <span className="flex-1 text-sm">{o.customerName} · {o.phone} · {o.city}</span>
+                <span className="font-black text-souq-green">{o.totalMru.toLocaleString()} MRU</span>
+                <span
+                  className={`text-xs font-bold rounded-full px-3 py-1 ${
+                    o.status === "PAID" ? "bg-souq-green text-white" : "bg-souq-gold/30 text-souq-deep"
+                  }`}
+                >
+                  {o.status}
+                </span>
+                {o.status !== "PAID" && (
+                  <button onClick={() => markPaid(o.ref)} className="text-xs font-bold border border-souq-green text-souq-green rounded-full px-3 py-1">
+                    Mark paid
+                  </button>
+                )}
+              </div>
+              {items.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-souq-goldlight/40 text-sm space-y-1">
+                  {items.map((it, idx) => (
+                    <div key={idx} className="flex justify-between text-souq-ink/80">
+                      <span>{it.emoji} {it.nameFr || it.nameAr} × {it.qty}</span>
+                      <span>{(it.priceMru * it.qty).toLocaleString()} MRU</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {items.length === 0 && (
+                <p className="mt-3 pt-3 border-t border-souq-goldlight/40 text-xs text-souq-ink/40">Address: {o.address}</p>
+              )}
+            </div>
+          );
+        })}
         {orders.length === 0 && <p className="text-center text-souq-ink/50 py-10">No orders yet</p>}
       </div>
     </div>
