@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useStore } from "../../lib/store";
 import PhoneInput from "../../components/PhoneInput";
 
@@ -12,19 +13,27 @@ const STATUS_LABELS = {
 const STEPS = ["RECEIVED", "IN_PROGRESS", "SHIPPED", "DELIVERED"];
 
 export default function AccountPage() {
-  const { setCustomer: setGlobalCustomer } = useStore();
+  const { setCustomer: setGlobalCustomer, cart, setQty, total, t, lang } = useStore();
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState(null);
   const [orders, setOrders] = useState([]);
   const [addresses, setAddresses] = useState([]);
   const [newAddr, setNewAddr] = useState({ city: "Nouakchott", address: "" });
+  const [tab, setTab] = useState("profile");
 
+  // Login flow state
   const [step, setStep] = useState("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [devCode, setDevCode] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Profile form state
+  const [profileForm, setProfileForm] = useState({ name: "", gender: "", age: "" });
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  const isProfileComplete = (c) => !!(c && c.name && c.gender && c.age);
 
   const loadMe = async () => {
     const res = await fetch("/api/auth/me");
@@ -33,38 +42,19 @@ export default function AccountPage() {
     setOrders(data.orders || []);
     setLoading(false);
     if (data.customer && setGlobalCustomer) setGlobalCustomer(data.customer);
-    if (data.customer) loadAddresses();
+    if (data.customer) {
+      setProfileForm({
+        name: data.customer.name || "",
+        gender: data.customer.gender || "",
+        age: data.customer.age || ""
+      });
+      setTab(isProfileComplete(data.customer) ? "orders" : "profile");
+      loadAddresses();
+    }
   };
 
   const loadAddresses = async () => {
     const res = await fetch("/api/addresses");
-    const data = await res.json();
-    setAddresses(data.addresses || []);
-  };
-
-  const addAddress = async () => {
-    if (!newAddr.city || !newAddr.address) return;
-    setBusy(true);
-    try {
-      const res = await fetch("/api/addresses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newAddr)
-      });
-      const data = await res.json();
-      setAddresses(data.addresses || []);
-      setNewAddr({ city: "Nouakchott", address: "" });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const removeAddress = async (id) => {
-    const res = await fetch("/api/addresses", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id })
-    });
     const data = await res.json();
     setAddresses(data.addresses || []);
   };
@@ -123,17 +113,21 @@ export default function AccountPage() {
     if (setGlobalCustomer) setGlobalCustomer(null);
   };
 
-  const chooseGender = async (gender) => {
+  const saveProfile = async () => {
+    setError("");
     setBusy(true);
+    setProfileSaved(false);
     try {
       const res = await fetch("/api/auth/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gender })
+        body: JSON.stringify(profileForm)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       await loadMe();
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2500);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -141,8 +135,36 @@ export default function AccountPage() {
     }
   };
 
+  const addAddress = async () => {
+    if (!newAddr.city || !newAddr.address) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAddr)
+      });
+      const data = await res.json();
+      setAddresses(data.addresses || []);
+      setNewAddr({ city: "Nouakchott", address: "" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeAddress = async (id) => {
+    const res = await fetch("/api/addresses", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id })
+    });
+    const data = await res.json();
+    setAddresses(data.addresses || []);
+  };
+
   if (loading) return <div className="py-16 text-center text-souq-ink/50">...</div>;
 
+  // ---------- Logged out: phone + OTP login ----------
   if (!customer) {
     return (
       <div className="py-16 max-w-sm mx-auto" dir="rtl">
@@ -201,122 +223,240 @@ export default function AccountPage() {
     );
   }
 
-  if (!customer.gender) {
-    return (
-      <div className="py-16 max-w-sm mx-auto text-center" dir="rtl">
-        <h1 className="font-black text-xl mb-2">مرحباً بك</h1>
-        <p className="text-souq-ink/70 mb-6">اختر لتخصيص حسابك</p>
-        <div className="flex gap-3">
-          <button
-            disabled={busy}
-            onClick={() => chooseGender("male")}
-            className="flex-1 bg-white border-2 border-souq-goldlight hover:border-souq-green rounded-2xl py-6 flex flex-col items-center gap-2 disabled:opacity-50"
-          >
-            <span className="text-4xl">🧔</span>
-            <span className="font-bold">ذكر</span>
-          </button>
-          <button
-            disabled={busy}
-            onClick={() => chooseGender("female")}
-            className="flex-1 bg-white border-2 border-souq-goldlight hover:border-souq-green rounded-2xl py-6 flex flex-col items-center gap-2 disabled:opacity-50"
-          >
-            <span className="text-4xl">🧕</span>
-            <span className="font-bold">أنثى</span>
-          </button>
-        </div>
-        {error && <p className="text-red-600 text-sm font-bold mt-4">{error}</p>}
-      </div>
-    );
-  }
+  // ---------- Logged in: profile / orders / cart ----------
+  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   return (
     <div className="py-8" dir="rtl">
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-2">
         <h1 className="font-black text-xl">حسابي — {customer.phone}</h1>
         <button onClick={logout} className="text-sm font-bold text-souq-green">تسجيل الخروج</button>
       </div>
 
-      <div className="mb-6 bg-white rounded-2xl border border-souq-goldlight/60 p-4">
-        <p className="font-bold mb-3">عناويني</p>
-        <div className="space-y-2 mb-3">
-          {addresses.map((a) => (
-            <div key={a.id} className="flex items-center justify-between text-sm bg-souq-sand rounded-xl px-3 py-2">
-              <span>{a.city} — {a.address}</span>
-              <button onClick={() => removeAddress(a.id)} className="text-red-600 font-bold text-xs">حذف</button>
-            </div>
-          ))}
-          {addresses.length === 0 && <p className="text-sm text-souq-ink/40">لا توجد عناوين محفوظة</p>}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="text"
-            value={newAddr.city}
-            onChange={(e) => setNewAddr({ ...newAddr, city: e.target.value })}
-            placeholder="المدينة"
-            className="flex-1 min-w-[100px] rounded-xl border border-souq-goldlight bg-white px-3 py-2 text-sm"
-          />
-          <input
-            type="text"
-            value={newAddr.address}
-            onChange={(e) => setNewAddr({ ...newAddr, address: e.target.value })}
-            placeholder="العنوان بالتفصيل"
-            className="flex-[2] min-w-[150px] rounded-xl border border-souq-goldlight bg-white px-3 py-2 text-sm"
-          />
+      {!isProfileComplete(customer) && (
+        <p className="text-sm text-souq-gold-deep bg-souq-gold/20 border border-souq-gold rounded-xl px-3 py-2 mb-4">
+          أكمل ملفك الشخصي حتى لا تحتاج لإدخال بياناتك في كل مرة تشتري فيها
+        </p>
+      )}
+
+      <div className="flex gap-1 mb-5 bg-white rounded-full border border-souq-goldlight/60 p-1">
+        {[
+          ["profile", "الملف الشخصي"],
+          ["orders", `طلباتي${orders.length ? ` (${orders.length})` : ""}`],
+          ["cart", `السلة${cartCount ? ` (${cartCount})` : ""}`]
+        ].map(([key, label]) => (
           <button
-            disabled={busy}
-            onClick={addAddress}
-            className="text-sm font-bold bg-souq-green text-white rounded-xl px-4 py-2 disabled:opacity-50"
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex-1 text-sm font-bold rounded-full py-2 transition ${
+              tab === key ? "bg-souq-green text-white" : "text-souq-ink/70"
+            }`}
           >
-            إضافة
+            {label}
           </button>
-        </div>
+        ))}
       </div>
 
-      <div className="space-y-4">
-        {orders.map((o) => {
-          let items = [];
-          try {
-            items = JSON.parse(o.itemsJson || "[]");
-          } catch {}
-          const currentStepIndex = STEPS.indexOf(o.fulfillmentStatus || "RECEIVED");
-          return (
-            <div key={o.ref} className="bg-white rounded-2xl border border-souq-goldlight/60 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono font-bold">{o.ref}</span>
-                <span className="font-black text-souq-green">{o.totalMru.toLocaleString()} MRU</span>
-              </div>
+      {tab === "profile" && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-souq-goldlight/60 p-4 space-y-3">
+            <label className="block">
+              <span className="text-sm font-bold">الاسم الكامل</span>
+              <input
+                type="text"
+                value={profileForm.name}
+                onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                className="mt-1 w-full rounded-xl border border-souq-goldlight bg-white px-4 py-2.5"
+              />
+            </label>
 
-              <div className="flex items-center gap-1 my-3">
-                {STEPS.map((s, i) => (
-                  <div key={s} className="flex-1 flex items-center">
-                    <div
-                      className={`w-3 h-3 rounded-full ${
-                        i <= currentStepIndex ? "bg-souq-green" : "bg-souq-goldlight"
-                      }`}
-                    />
-                    {i < STEPS.length - 1 && (
-                      <div className={`flex-1 h-0.5 ${i < currentStepIndex ? "bg-souq-green" : "bg-souq-goldlight"}`} />
-                    )}
-                  </div>
-                ))}
-              </div>
-              <p className="text-sm font-bold text-souq-green mb-3">
-                {STATUS_LABELS[o.fulfillmentStatus]?.ar || o.fulfillmentStatus}
-              </p>
-
-              <div className="text-sm space-y-1 border-t border-souq-goldlight/40 pt-2">
-                {items.map((it, idx) => (
-                  <div key={idx} className="flex justify-between text-souq-ink/80">
-                    <span>{it.emoji} {it.nameAr || it.nameFr} × {it.qty}</span>
-                    <span>{(it.priceMru * it.qty).toLocaleString()} MRU</span>
-                  </div>
-                ))}
+            <div>
+              <span className="text-sm font-bold block mb-2">الجنس</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setProfileForm({ ...profileForm, gender: "male" })}
+                  className={`flex-1 rounded-xl border-2 py-2 font-bold ${
+                    profileForm.gender === "male" ? "border-souq-green bg-souq-green/10" : "border-souq-goldlight"
+                  }`}
+                >
+                  🧔 ذكر
+                </button>
+                <button
+                  onClick={() => setProfileForm({ ...profileForm, gender: "female" })}
+                  className={`flex-1 rounded-xl border-2 py-2 font-bold ${
+                    profileForm.gender === "female" ? "border-souq-green bg-souq-green/10" : "border-souq-goldlight"
+                  }`}
+                >
+                  🧕 أنثى
+                </button>
               </div>
             </div>
-          );
-        })}
-        {orders.length === 0 && <p className="text-center text-souq-ink/50 py-10">لا توجد طلبات بعد</p>}
-      </div>
+
+            <label className="block">
+              <span className="text-sm font-bold">العمر</span>
+              <input
+                type="number"
+                dir="ltr"
+                min="1"
+                max="119"
+                value={profileForm.age}
+                onChange={(e) => setProfileForm({ ...profileForm, age: e.target.value })}
+                className="mt-1 w-full rounded-xl border border-souq-goldlight bg-white px-4 py-2.5"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-bold">رقم الهاتف</span>
+              <input
+                type="text"
+                dir="ltr"
+                disabled
+                value={customer.phone}
+                className="mt-1 w-full rounded-xl border border-souq-goldlight bg-souq-sand px-4 py-2.5 text-souq-ink/60"
+              />
+            </label>
+
+            {error && <p className="text-red-600 text-sm font-bold">{error}</p>}
+            {profileSaved && <p className="text-souq-green text-sm font-bold">تم الحفظ ✓</p>}
+            <button
+              disabled={busy}
+              onClick={saveProfile}
+              className="w-full bg-souq-green text-white font-bold rounded-full py-2.5 disabled:opacity-50"
+            >
+              {busy ? "..." : "حفظ"}
+            </button>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-souq-goldlight/60 p-4">
+            <p className="font-bold mb-3">عناويني</p>
+            <div className="space-y-2 mb-3">
+              {addresses.map((a) => (
+                <div key={a.id} className="flex items-center justify-between text-sm bg-souq-sand rounded-xl px-3 py-2">
+                  <span>{a.city} — {a.address}</span>
+                  <button onClick={() => removeAddress(a.id)} className="text-red-600 font-bold text-xs">حذف</button>
+                </div>
+              ))}
+              {addresses.length === 0 && <p className="text-sm text-souq-ink/40">لا توجد عناوين محفوظة</p>}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="text"
+                value={newAddr.city}
+                onChange={(e) => setNewAddr({ ...newAddr, city: e.target.value })}
+                placeholder="المدينة"
+                className="flex-1 min-w-[100px] rounded-xl border border-souq-goldlight bg-white px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                value={newAddr.address}
+                onChange={(e) => setNewAddr({ ...newAddr, address: e.target.value })}
+                placeholder="العنوان بالتفصيل"
+                className="flex-[2] min-w-[150px] rounded-xl border border-souq-goldlight bg-white px-3 py-2 text-sm"
+              />
+              <button
+                disabled={busy}
+                onClick={addAddress}
+                className="text-sm font-bold bg-souq-green text-white rounded-xl px-4 py-2 disabled:opacity-50"
+              >
+                إضافة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "orders" && (
+        <div className="space-y-4">
+          {orders.map((o) => {
+            let items = [];
+            try {
+              items = JSON.parse(o.itemsJson || "[]");
+            } catch {}
+            const currentStepIndex = STEPS.indexOf(o.fulfillmentStatus || "RECEIVED");
+            return (
+              <div key={o.ref} className="bg-white rounded-2xl border border-souq-goldlight/60 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono font-bold">{o.ref}</span>
+                  <span className="font-black text-souq-green">{o.totalMru.toLocaleString()} MRU</span>
+                </div>
+
+                <div className="flex items-center gap-1 my-3">
+                  {STEPS.map((s, i) => (
+                    <div key={s} className="flex-1 flex items-center">
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          i <= currentStepIndex ? "bg-souq-green" : "bg-souq-goldlight"
+                        }`}
+                      />
+                      {i < STEPS.length - 1 && (
+                        <div className={`flex-1 h-0.5 ${i < currentStepIndex ? "bg-souq-green" : "bg-souq-goldlight"}`} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm font-bold text-souq-green mb-3">
+                  {STATUS_LABELS[o.fulfillmentStatus]?.ar || o.fulfillmentStatus}
+                </p>
+
+                <div className="text-sm space-y-1 border-t border-souq-goldlight/40 pt-2">
+                  {items.map((it, idx) => (
+                    <div key={idx} className="flex justify-between text-souq-ink/80">
+                      <span>{it.emoji} {it.nameAr || it.nameFr} × {it.qty}</span>
+                      <span>{(it.priceMru * it.qty).toLocaleString()} MRU</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {orders.length === 0 && <p className="text-center text-souq-ink/50 py-10">لا توجد طلبات بعد</p>}
+        </div>
+      )}
+
+      {tab === "cart" && (
+        <div>
+          {cart.length === 0 ? (
+            <div className="text-center py-14">
+              <p className="text-4xl mb-3">🛒</p>
+              <p className="font-bold">{t("emptyCart")}</p>
+              <Link href="/" className="inline-block mt-4 bg-souq-green text-white rounded-full px-6 py-2 font-bold">
+                {t("shopNow")}
+              </Link>
+            </div>
+          ) : (
+            <div>
+              <div className="space-y-3">
+                {cart.map((i) => (
+                  <div key={i.id} className="bg-white rounded-2xl border border-souq-goldlight/60 p-4 flex items-center gap-4">
+                    <span className="text-3xl">{i.emoji}</span>
+                    <div className="flex-1">
+                      <p className="font-bold">{lang === "ar" ? i.nameAr : i.nameFr}</p>
+                      <p className="text-sm text-souq-green font-bold">
+                        {i.priceMru.toLocaleString()} {t("mru")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setQty(i.id, i.qty - 1)} className="w-8 h-8 rounded-full bg-souq-sand font-bold">−</button>
+                      <span className="w-6 text-center font-bold">{i.qty}</span>
+                      <button onClick={() => setQty(i.id, i.qty + 1)} className="w-8 h-8 rounded-full bg-souq-sand font-bold">+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 bg-souq-green text-white rounded-2xl p-5 flex items-center justify-between">
+                <span className="font-bold">{t("total")}</span>
+                <span className="font-black text-xl">{total.toLocaleString()} {t("mru")}</span>
+              </div>
+              <Link
+                href="/checkout"
+                className="block text-center mt-4 bg-souq-gold text-souq-deep font-black rounded-full py-3 hover:brightness-105 transition"
+              >
+                {t("checkout")}
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

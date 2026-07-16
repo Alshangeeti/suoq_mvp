@@ -9,13 +9,31 @@ export async function PATCH(req) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const gender = body.gender === "male" || body.gender === "female" ? body.gender : null;
-  if (!gender) return NextResponse.json({ error: "Invalid gender" }, { status: 400 });
+  const data = {};
+
+  if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();
+  if (body.gender === "male" || body.gender === "female") data.gender = body.gender;
+  if (body.age !== undefined && body.age !== null && body.age !== "") {
+    const age = parseInt(body.age, 10);
+    if (!Number.isNaN(age) && age > 0 && age < 120) data.age = age;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
 
   const customer = await prisma.customer.update({
     where: { phone: session.phone },
-    data: { gender }
+    data
   });
 
-  return NextResponse.json({ ok: true, customer: { phone: customer.phone, gender: customer.gender } });
+  return NextResponse.json({
+    ok: true,
+    customer: {
+      phone: customer.phone,
+      name: customer.name,
+      gender: customer.gender,
+      age: customer.age
+    }
+  });
 }

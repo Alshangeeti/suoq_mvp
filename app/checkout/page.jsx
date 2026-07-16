@@ -15,9 +15,35 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!customer) return;
+
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.customer) return;
+        setForm((f) => ({
+          ...f,
+          customerName: f.customerName || data.customer.name || "",
+          phone: f.phone || data.customer.phone || ""
+        }));
+      })
+      .catch(() => {});
+
     fetch("/api/addresses")
       .then((r) => r.json())
-      .then((data) => setSavedAddresses(data.addresses || []))
+      .then((data) => {
+        const list = data.addresses || [];
+        setSavedAddresses(list);
+        // Auto-fill with the most recently used address so returning
+        // customers don't have to retype it every time.
+        if (list.length > 0) {
+          setSelectedAddressId(list[0].id);
+          setForm((f) => ({
+            ...f,
+            city: f.address ? f.city : list[0].city,
+            address: f.address ? f.address : list[0].address
+          }));
+        }
+      })
       .catch(() => {});
   }, [customer]);
 

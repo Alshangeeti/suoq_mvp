@@ -17,7 +17,7 @@ export async function GET(req) {
   });
 
   return NextResponse.json({
-    customer: { phone: customer.phone, name: customer.name, gender: customer.gender },
+    customer: { phone: customer.phone, name: customer.name, gender: customer.gender, age: customer.age },
     orders
   });
 }

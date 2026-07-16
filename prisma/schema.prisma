@@ -24,6 +24,7 @@ model Customer {
   phone         String   @unique
   name          String?
   gender        String?
+  age           Int?
   verified      Boolean  @default(false)
   cartJson      String   @default("[]")
   addressesJson String   @default("[]")
