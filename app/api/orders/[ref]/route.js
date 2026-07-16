@@ -3,6 +3,7 @@ import { prisma } from "../../../../lib/db";
 import { NextResponse } from "next/server";
 import { isAdmin } from "../../../../lib/adminAuth";
 import { methodMode } from "../../../../lib/payments";
+import { autoPurchase } from "../../../../lib/autofulfill";
 
 const FULFILLMENT_STATUSES = ["RECEIVED", "IN_PROGRESS", "SHIPPED", "DELIVERED"];
 
@@ -79,11 +80,25 @@ export async function PATCH(req, { params }) {
   if (body.fulfillmentStatus && FULFILLMENT_STATUSES.includes(body.fulfillmentStatus)) {
     data.fulfillmentStatus = body.fulfillmentStatus;
   }
-  if (Object.keys(data).length === 0) {
+  if (Object.keys(data).length === 0 && body.action !== "retryAe") {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
+  if (body.action === "retryAe") {
+    await prisma.order.update({ where: { ref: params.ref }, data: { aeOrderError: null } });
+    await autoPurchase(params.ref);
+    const o = await prisma.order.findUnique({ where: { ref: params.ref } });
+    return NextResponse.json({ ok: true, aeOrderId: o.aeOrderId, aeOrderError: o.aeOrderError });
+  }
+
   const order = await prisma.order.update({ where: { ref: params.ref }, data });
+
+  // Confirmed payment → automatically place the AliExpress order (async,
+  // result lands on the order as aeOrderId / aeOrderError).
+  if (data.status === "PAID") {
+    autoPurchase(params.ref).catch(() => {});
+  }
+
   return NextResponse.json({
     ok: true,
     ref: order.ref,

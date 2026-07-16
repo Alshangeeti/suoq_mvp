@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "../../../lib/db";
 import { NextResponse } from "next/server";
+import { autoPurchase } from "../../../lib/autofulfill";
 
 // Receives POSTs from the Android SMS gateway app at the Nouakchott office.
 // Expected JSON body: { "message": "<full SMS text>", "secret": "<shared secret>" }
@@ -65,5 +66,6 @@ export async function POST(req) {
     where: { id: order.id },
     data: { status: "PAID", paidAt: new Date() }
   });
+  autoPurchase(order.ref).catch(() => {});
   return NextResponse.json({ matched: true, ref: order.ref, amount });
 }

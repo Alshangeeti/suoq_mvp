@@ -86,6 +86,7 @@ export default function AdminPage() {
         imageUrl: data.images && data.images[0] ? data.images[0] : "",
         images: data.images || [],
         aliexpressId: data.productId,
+        skuAttr: data.skuAttr || "",
         costUsd: data.minPriceUsd || ""
       });
     } catch (e) {
@@ -241,6 +242,24 @@ export default function AdminPage() {
         )}
         {o.paymentRef && (
           <p className="mt-2 text-sm font-bold text-souq-deep">Payment ref: <span className="font-mono">{o.paymentRef}</span></p>
+        )}
+        {o.aeOrderId && (
+          <p className="mt-2 text-sm font-bold text-souq-green">
+            🛒 AliExpress order: <span className="font-mono">{o.aeOrderId}</span>
+            {o.aeOrderError && o.aeOrderError.startsWith("OK") ? ` ${o.aeOrderError.slice(2)}` : ""}
+            <span className="text-souq-ink/50 font-normal"> — pay it in your AliExpress account</span>
+          </p>
+        )}
+        {!o.aeOrderId && o.aeOrderError && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="text-sm font-bold text-red-600 flex-1 min-w-[200px]">⚠ AE purchase failed: {o.aeOrderError.slice(0, 180)}</p>
+            <button
+              onClick={() => patchOrder(o.ref, { action: "retryAe" })}
+              className="text-xs font-bold border border-souq-green text-souq-green rounded-full px-3 py-1"
+            >
+              ↻ Retry AE order
+            </button>
+          </div>
         )}
         {items.length > 0 && (
           <div className="mt-3 pt-3 border-t border-souq-goldlight/40 text-sm space-y-1">

@@ -20,6 +20,7 @@ model Product {
   imageUrl     String?
   imagesJson   String  @default("[]")
   aliexpressId String?
+  skuAttr      String?
   costUsd      Float?
 }
 
@@ -59,6 +60,8 @@ model Order {
   paymentRef        String?
   rejectionReason   String?
   rejectionNote     String?
+  aeOrderId         String?
+  aeOrderError      String?
   fulfillmentStatus String    @default("RECEIVED")
   itemsJson         String
   createdAt         DateTime  @default(now())

@@ -5,6 +5,7 @@ import { verifySessionToken } from "../../../lib/auth";
 import { normalizePhone } from "../../../lib/phone";
 import { isAdmin } from "../../../lib/adminAuth";
 import { METHOD_IDS, methodMode } from "../../../lib/payments";
+import { autoPurchase } from "../../../lib/autofulfill";
 
 function makeRef() {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -68,6 +69,9 @@ export async function POST(req) {
     }
   }
   if (!order) return NextResponse.json({ error: "Please try again" }, { status: 500 });
+  if (initialStatus === "COD") {
+    autoPurchase(order.ref).catch(() => {});
+  }
   return NextResponse.json({ ref: order.ref });
 }
 

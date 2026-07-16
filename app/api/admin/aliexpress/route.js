@@ -56,6 +56,20 @@ export async function POST(req) {
     const minPrice = prices.length ? Math.min(...prices) : null;
     const maxPrice = prices.length ? Math.max(...prices) : null;
 
+    // Default variant: the cheapest available SKU's attribute string —
+    // used later when auto-ordering this product to the warehouse.
+    let skuAttr = null;
+    if (skus.length > 0) {
+      const withPrice = skus
+        .map((s) => ({
+          attr: firstDefined(s.sku_attr, s.id),
+          price: parseFloat(firstDefined(s.offer_sale_price, s.sku_price, s.offer_bulk_sale_price))
+        }))
+        .filter((x) => x.attr);
+      withPrice.sort((a, b) => (a.price || 0) - (b.price || 0));
+      if (withPrice.length > 0) skuAttr = String(withPrice[0].attr);
+    }
+
     if (!title && images.length === 0) {
       return NextResponse.json(
         { error: "Unrecognized API response", raw: JSON.stringify(result).slice(0, 1500) },
@@ -68,7 +82,8 @@ export async function POST(req) {
       title,
       images: images.slice(0, 6),
       minPriceUsd: minPrice,
-      maxPriceUsd: maxPrice
+      maxPriceUsd: maxPrice,
+      skuAttr
     });
   } catch (e) {
     return NextResponse.json({ error: String(e && e.message ? e.message : e) }, { status: 502 });

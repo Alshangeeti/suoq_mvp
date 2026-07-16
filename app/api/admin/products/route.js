@@ -22,13 +22,14 @@ function cleanProduct(body) {
     );
   }
   const aliexpressId = String(body.aliexpressId || "").trim().slice(0, 30) || null;
+  const skuAttr = String(body.skuAttr || "").trim().slice(0, 300) || null;
   const costUsd = body.costUsd !== undefined && body.costUsd !== null && body.costUsd !== ""
     ? parseFloat(body.costUsd)
     : null;
   if (!nameAr || !nameFr || Number.isNaN(priceMru) || priceMru <= 0) return null;
   return {
     nameAr, nameFr, descAr, descFr, priceMru, category, emoji, stocked,
-    imageUrl, imagesJson, aliexpressId,
+    imageUrl, imagesJson, aliexpressId, skuAttr,
     costUsd: costUsd !== null && !Number.isNaN(costUsd) ? costUsd : null
   };
 }
