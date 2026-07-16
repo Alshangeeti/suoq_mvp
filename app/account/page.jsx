@@ -229,7 +229,21 @@ export default function AccountPage() {
   return (
     <div className="py-8" dir="rtl">
       <div className="flex items-center justify-between mb-2">
-        <h1 className="font-black text-xl">حسابي — {customer.phone}</h1>
+        <div className="flex items-center gap-3">
+          {customer.gender && (
+            <img
+              src={customer.gender === "male" ? "/avatars/man-daraa.svg" : "/avatars/woman-melhfa.svg"}
+              width="48"
+              height="48"
+              alt=""
+              className="rounded-full border-2 border-souq-gold"
+            />
+          )}
+          <div>
+            <h1 className="font-black text-xl">{customer.name ? `مرحباً ${customer.name}` : "حسابي"}</h1>
+            <p className="text-xs text-souq-ink/50" dir="ltr">{customer.phone}</p>
+          </div>
+        </div>
         <button onClick={logout} className="text-sm font-bold text-souq-green">تسجيل الخروج</button>
       </div>
 
@@ -275,19 +289,21 @@ export default function AccountPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setProfileForm({ ...profileForm, gender: "male" })}
-                  className={`flex-1 rounded-xl border-2 py-2 font-bold ${
+                  className={`flex-1 rounded-xl border-2 py-3 font-bold flex flex-col items-center gap-2 ${
                     profileForm.gender === "male" ? "border-souq-green bg-souq-green/10" : "border-souq-goldlight"
                   }`}
                 >
-                  🧔 ذكر
+                  <img src="/avatars/man-daraa.svg" width="56" height="56" alt="" className="rounded-full" />
+                  ذكر
                 </button>
                 <button
                   onClick={() => setProfileForm({ ...profileForm, gender: "female" })}
-                  className={`flex-1 rounded-xl border-2 py-2 font-bold ${
+                  className={`flex-1 rounded-xl border-2 py-3 font-bold flex flex-col items-center gap-2 ${
                     profileForm.gender === "female" ? "border-souq-green bg-souq-green/10" : "border-souq-goldlight"
                   }`}
                 >
-                  🧕 أنثى
+                  <img src="/avatars/woman-melhfa.svg" width="56" height="56" alt="" className="rounded-full" />
+                  أنثى
                 </button>
               </div>
             </div>

@@ -1,8 +1,21 @@
 "use client";
+import { useState, useRef, useEffect } from "react";
 import { useStore } from "../lib/store";
 
 export default function ProductCard({ p }) {
   const { t, lang, addToCart } = useStore();
+  const [added, setAdded] = useState(false);
+  const timer = useRef(null);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const handleAdd = () => {
+    addToCart(p);
+    setAdded(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setAdded(false), 1500);
+  };
+
   const name = lang === "ar" ? p.nameAr : p.nameFr;
   const desc = lang === "ar" ? p.descAr : p.descFr;
   return (
@@ -25,10 +38,14 @@ export default function ProductCard({ p }) {
             {p.priceMru.toLocaleString()} <span className="text-xs">{t("mru")}</span>
           </span>
           <button
-            onClick={() => addToCart(p)}
-            className="bg-souq-green text-white text-sm font-bold rounded-full px-4 py-1.5 hover:bg-souq-deep transition"
+            onClick={handleAdd}
+            className={`text-sm font-bold rounded-full px-4 py-1.5 transition ${
+              added
+                ? "bg-souq-gold text-souq-deep"
+                : "bg-souq-green text-white hover:bg-souq-deep"
+            }`}
           >
-            {t("addToCart")}
+            {added ? t("added") : t("addToCart")}
           </button>
         </div>
       </div>

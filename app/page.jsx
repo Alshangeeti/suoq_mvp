@@ -9,12 +9,21 @@ export default function Home() {
   const { t } = useStore();
   const [products, setProducts] = useState([]);
   const [cat, setCat] = useState("all");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     fetch("/api/products").then((r) => r.json()).then(setProducts).catch(() => {});
   }, []);
 
-  const shown = cat === "all" ? products : products.filter((p) => p.category === cat);
+  const byCat = cat === "all" ? products : products.filter((p) => p.category === cat);
+  const q = query.trim().toLowerCase();
+  const shown = !q
+    ? byCat
+    : byCat.filter((p) =>
+        [p.nameAr, p.nameFr, p.descAr, p.descFr]
+          .filter(Boolean)
+          .some((s) => s.toLowerCase().includes(q))
+      );
 
   return (
     <div>
@@ -35,7 +44,17 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="flex gap-2 overflow-x-auto py-5">
+      <div className="mt-5">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("search")}
+          className="w-full rounded-full border border-souq-goldlight bg-white px-5 py-2.5 focus:outline-none focus:border-souq-green shadow-sm"
+        />
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto py-4">
         {CATS.map((c) => (
           <button
             key={c}
@@ -56,6 +75,9 @@ export default function Home() {
           <ProductCard key={p.id} p={p} />
         ))}
       </div>
+      {shown.length === 0 && products.length > 0 && (
+        <p className="text-center text-souq-ink/50 py-10">{t("noResults")}</p>
+      )}
 
       <section className="mt-12">
         <h2 className="text-2xl font-black text-souq-green mb-4">{t("trust")}</h2>
