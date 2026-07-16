@@ -17,7 +17,20 @@ export default function AdminPage() {
   };
 
   const markPaid = async (ref) => {
-    await fetch(`/api/orders/${ref}`, { method: "PATCH", headers: { "x-admin-key": key } });
+    await fetch(`/api/orders/${ref}`, {
+      method: "PATCH",
+      headers: { "x-admin-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "markPaid" })
+    });
+    load();
+  };
+
+  const updateFulfillment = async (ref, fulfillmentStatus) => {
+    await fetch(`/api/orders/${ref}`, {
+      method: "PATCH",
+      headers: { "x-admin-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ fulfillmentStatus })
+    });
     load();
   };
 
@@ -69,6 +82,16 @@ export default function AdminPage() {
                     Mark paid
                   </button>
                 )}
+                <select
+                  value={o.fulfillmentStatus || "RECEIVED"}
+                  onChange={(e) => updateFulfillment(o.ref, e.target.value)}
+                  className="text-xs font-bold border border-souq-goldlight rounded-full px-2 py-1 bg-white"
+                >
+                  <option value="RECEIVED">Received</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="SHIPPED">Shipped</option>
+                  <option value="DELIVERED">Delivered</option>
+                </select>
               </div>
               {items.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-souq-goldlight/40 text-sm space-y-1">

@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "../../../lib/db";
 import { NextResponse } from "next/server";
+import { verifySessionToken } from "../../../lib/auth";
+import { normalizePhone } from "../../../lib/phone";
 
 function makeRef() {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -23,7 +25,19 @@ export async function POST(req) {
   }, 0);
   if (total <= 0) return NextResponse.json({ error: "Invalid cart" }, { status: 400 });
 
-  const normalizedPhone = String(phone).replace(/\D/g, "").slice(-8);
+  const normalizedPhone = normalizePhone(phone);
+
+  // If the shopper is logged in (verified via WhatsApp OTP) and the phone
+  // matches their account, link this order to their customer record so it
+  // shows up in their /account order history automatically.
+  let customerId = null;
+  const token = req.cookies.get("souq_session")?.value;
+  const session = token ? verifySessionToken(token) : null;
+  if (session && session.phone === normalizedPhone) {
+    const customer = await prisma.customer.findUnique({ where: { phone: normalizedPhone } });
+    if (customer) customerId = customer.id;
+  }
+
   const order = await prisma.order.create({
     data: {
       ref: makeRef(),
@@ -32,7 +46,8 @@ export async function POST(req) {
       city: city || "Nouakchott",
       address,
       totalMru: total,
-      itemsJson: JSON.stringify(items)
+      itemsJson: JSON.stringify(items),
+      ...(customerId ? { customerId } : {})
     }
   });
   return NextResponse.json({ ref: order.ref });

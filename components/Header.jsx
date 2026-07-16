@@ -20,6 +20,9 @@ export default function Header() {
           >
             {lang === "ar" ? "FR" : "عربي"}
           </button>
+          <Link href="/account" className="text-2xl" aria-label="account">
+            👤
+          </Link>
           <Link href="/cart" className="relative text-2xl" aria-label={t("cart")}>
             🛒
             {count > 0 && (

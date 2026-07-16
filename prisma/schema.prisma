@@ -19,16 +19,37 @@ model Product {
   stocked  Boolean @default(false)
 }
 
+model Customer {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  name      String?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  orders    Order[]
+}
+
+model OtpCode {
+  id        Int      @id @default(autoincrement())
+  phone     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
 model Order {
-  id           Int       @id @default(autoincrement())
-  ref          String    @unique
-  customerName String
-  phone        String
-  city         String
-  address      String
-  totalMru     Int
-  status       String    @default("PENDING_PAYMENT")
-  itemsJson    String
-  createdAt    DateTime  @default(now())
-  paidAt       DateTime?
+  id                Int       @id @default(autoincrement())
+  ref               String    @unique
+  customerName      String
+  phone             String
+  city              String
+  address           String
+  totalMru          Int
+  status            String    @default("PENDING_PAYMENT")
+  fulfillmentStatus String    @default("RECEIVED")
+  itemsJson         String
+  createdAt         DateTime  @default(now())
+  paidAt            DateTime?
+  customerId        Int?
+  customer          Customer? @relation(fields: [customerId], references: [id])
 }
