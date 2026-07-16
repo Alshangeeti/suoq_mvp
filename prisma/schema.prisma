@@ -23,6 +23,7 @@ model Customer {
   id        Int      @id @default(autoincrement())
   phone     String   @unique
   name      String?
+  gender    String?
   verified  Boolean  @default(false)
   cartJson  String   @default("[]")
   createdAt DateTime @default(now())

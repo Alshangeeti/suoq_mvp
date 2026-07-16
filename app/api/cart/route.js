@@ -17,7 +17,7 @@ export async function GET(req) {
   try {
     cart = JSON.parse(customer.cartJson || "[]");
   } catch {}
-  return NextResponse.json({ customer: { phone: customer.phone }, cart });
+  return NextResponse.json({ customer: { phone: customer.phone, gender: customer.gender }, cart });
 }
 
 export async function PUT(req) {

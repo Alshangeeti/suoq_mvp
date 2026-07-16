@@ -86,6 +86,24 @@ export default function AccountPage() {
     if (setGlobalCustomer) setGlobalCustomer(null);
   };
 
+  const chooseGender = async (gender) => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gender })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      await loadMe();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) return <div className="py-16 text-center text-souq-ink/50">...</div>;
 
   if (!customer) {
@@ -149,6 +167,34 @@ export default function AccountPage() {
             </button>
           </div>
         )}
+      </div>
+    );
+  }
+
+  if (!customer.gender) {
+    return (
+      <div className="py-16 max-w-sm mx-auto text-center" dir="rtl">
+        <h1 className="font-black text-xl mb-2">مرحباً بك</h1>
+        <p className="text-souq-ink/70 mb-6">اختر لتخصيص حسابك</p>
+        <div className="flex gap-3">
+          <button
+            disabled={busy}
+            onClick={() => chooseGender("male")}
+            className="flex-1 bg-white border-2 border-souq-goldlight hover:border-souq-green rounded-2xl py-6 flex flex-col items-center gap-2 disabled:opacity-50"
+          >
+            <span className="text-4xl">🧔</span>
+            <span className="font-bold">ذكر</span>
+          </button>
+          <button
+            disabled={busy}
+            onClick={() => chooseGender("female")}
+            className="flex-1 bg-white border-2 border-souq-goldlight hover:border-souq-green rounded-2xl py-6 flex flex-col items-center gap-2 disabled:opacity-50"
+          >
+            <span className="text-4xl">🧕</span>
+            <span className="font-bold">أنثى</span>
+          </button>
+        </div>
+        {error && <p className="text-red-600 text-sm font-bold mt-4">{error}</p>}
       </div>
     );
   }

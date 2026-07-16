@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useStore } from "../lib/store";
+import AccountIcon from "./AccountIcon";
 
 export default function Header() {
-  const { t, lang, setLang, count } = useStore();
+  const { t, lang, setLang, count, customer } = useStore();
   return (
     <header className="bg-souq-green text-white sticky top-0 z-20 shadow-md">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
@@ -20,8 +21,8 @@ export default function Header() {
           >
             {lang === "ar" ? "FR" : "عربي"}
           </button>
-          <Link href="/account" className="text-2xl" aria-label="account">
-            👤
+          <Link href="/account" aria-label="account">
+            <AccountIcon gender={customer?.gender} />
           </Link>
           <Link href="/cart" className="relative text-2xl" aria-label={t("cart")}>
             🛒
