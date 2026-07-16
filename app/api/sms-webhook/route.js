@@ -26,18 +26,40 @@ export async function POST(req) {
   }
   const amount = Math.round(parseFloat(amountMatch[1].replace(/\s/g, "").replace(",", ".")));
 
-  const where = { status: "PENDING_PAYMENT", totalMru: amount };
-  if (phoneMatch) where.phone = phoneMatch[1];
-
-  let order = await prisma.order.findFirst({ where, orderBy: { createdAt: "asc" } });
-  // Fallback: match on amount alone if phone match found nothing
-  if (!order && phoneMatch) {
+  let order = null;
+  if (phoneMatch) {
+    // Phone present in the SMS: require an exact phone+amount match.
+    // Guessing by amount alone here could mark the wrong customer's order
+    // paid — if nothing matches, leave it for manual admin review.
     order = await prisma.order.findFirst({
-      where: { status: "PENDING_PAYMENT", totalMru: amount },
+      where: { status: "PENDING_PAYMENT", totalMru: amount, phone: phoneMatch[1] },
       orderBy: { createdAt: "asc" }
     });
+    if (!order) {
+      return NextResponse.json({
+        matched: false,
+        reason: "phone_amount_mismatch_needs_manual_review",
+        amount,
+        phone: phoneMatch[1]
+      });
+    }
+  } else {
+    // No phone in the SMS: amount-only matching is only safe when there is
+    // exactly one pending order with this amount.
+    const candidates = await prisma.order.findMany({
+      where: { status: "PENDING_PAYMENT", totalMru: amount },
+      orderBy: { createdAt: "asc" },
+      take: 2
+    });
+    if (candidates.length !== 1) {
+      return NextResponse.json({
+        matched: false,
+        reason: candidates.length === 0 ? "no_pending_order" : "ambiguous_amount_needs_manual_review",
+        amount
+      });
+    }
+    order = candidates[0];
   }
-  if (!order) return NextResponse.json({ matched: false, reason: "no_pending_order", amount });
 
   await prisma.order.update({
     where: { id: order.id },

@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "../../../../lib/db";
 import { NextResponse } from "next/server";
+import { isAdmin } from "../../../../lib/adminAuth";
 
 const FULFILLMENT_STATUSES = ["RECEIVED", "IN_PROGRESS", "SHIPPED", "DELIVERED"];
 
@@ -14,13 +15,12 @@ export async function GET(req, { params }) {
       fulfillmentStatus: order.fulfillmentStatus,
       totalMru: order.totalMru
     },
-    merchantCode: process.env.BANKILY_MERCHANT_CODE || "00000"
+    merchantCode: process.env.BANKILY_MERCHANT_CODE || "—"
   });
 }
 
 export async function PATCH(req, { params }) {
-  const key = req.headers.get("x-admin-key");
-  if (!process.env.ADMIN_KEY || key !== process.env.ADMIN_KEY) {
+  if (!isAdmin(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

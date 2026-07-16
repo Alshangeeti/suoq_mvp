@@ -3,11 +3,12 @@ import { prisma } from "../../../lib/db";
 import { NextResponse } from "next/server";
 import { verifySessionToken } from "../../../lib/auth";
 import { normalizePhone } from "../../../lib/phone";
+import { isAdmin } from "../../../lib/adminAuth";
 
 function makeRef() {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   let s = "";
-  for (let i = 0; i < 5; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
   return "SM-" + s;
 }
 
@@ -38,24 +39,34 @@ export async function POST(req) {
     if (customer) customerId = customer.id;
   }
 
-  const order = await prisma.order.create({
-    data: {
-      ref: makeRef(),
-      customerName,
-      phone: normalizedPhone,
-      city: city || "Nouakchott",
-      address,
-      totalMru: total,
-      itemsJson: JSON.stringify(items),
-      ...(customerId ? { customerId } : {})
+  // Retry on the (rare) random ref collision instead of surfacing a 500
+  // to the customer at the moment they're trying to pay.
+  let order = null;
+  for (let attempt = 0; attempt < 3 && !order; attempt++) {
+    try {
+      order = await prisma.order.create({
+        data: {
+          ref: makeRef(),
+          customerName,
+          phone: normalizedPhone,
+          city: city || "Nouakchott",
+          address,
+          totalMru: total,
+          itemsJson: JSON.stringify(items),
+          ...(customerId ? { customerId } : {})
+        }
+      });
+    } catch (e) {
+      if (e && e.code === "P2002") continue; // unique ref collision — retry
+      throw e;
     }
-  });
+  }
+  if (!order) return NextResponse.json({ error: "Please try again" }, { status: 500 });
   return NextResponse.json({ ref: order.ref });
 }
 
 export async function GET(req) {
-  const key = req.headers.get("x-admin-key");
-  if (!process.env.ADMIN_KEY || key !== process.env.ADMIN_KEY) {
+  if (!isAdmin(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const orders = await prisma.order.findMany({ orderBy: { createdAt: "desc" } });
