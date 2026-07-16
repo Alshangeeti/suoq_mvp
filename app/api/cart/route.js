@@ -24,7 +24,23 @@ export async function PUT(req) {
   const customer = await getSessionCustomer(req);
   if (!customer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const cart = Array.isArray(body.cart) ? body.cart : [];
+  const raw = Array.isArray(body.cart) ? body.cart : [];
+  // Validate shape and cap size so the account cart can't be abused as
+  // arbitrary JSON storage.
+  const cart = raw.slice(0, 50).flatMap((i) => {
+    const id = parseInt(i && i.id, 10);
+    const qty = parseInt(i && i.qty, 10);
+    const priceMru = parseInt(i && i.priceMru, 10);
+    if (Number.isNaN(id) || Number.isNaN(qty) || qty < 1 || qty > 99) return [];
+    return [{
+      id,
+      qty,
+      priceMru: Number.isNaN(priceMru) ? 0 : priceMru,
+      nameAr: String(i.nameAr || "").slice(0, 200),
+      nameFr: String(i.nameFr || "").slice(0, 200),
+      emoji: String(i.emoji || "").slice(0, 8)
+    }];
+  });
   await prisma.customer.update({
     where: { id: customer.id },
     data: { cartJson: JSON.stringify(cart) }

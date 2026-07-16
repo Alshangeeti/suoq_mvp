@@ -30,9 +30,9 @@ export default function CartPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setQty(i.id, i.qty - 1)} className="w-8 h-8 rounded-full bg-souq-sand font-bold">−</button>
+              <button onClick={() => setQty(i.id, i.qty - 1)} aria-label="decrease quantity" className="w-8 h-8 rounded-full bg-souq-sand font-bold">−</button>
               <span className="w-6 text-center font-bold">{i.qty}</span>
-              <button onClick={() => setQty(i.id, i.qty + 1)} className="w-8 h-8 rounded-full bg-souq-sand font-bold">+</button>
+              <button onClick={() => setQty(i.id, i.qty + 1)} aria-label="increase quantity" className="w-8 h-8 rounded-full bg-souq-sand font-bold">+</button>
             </div>
           </div>
         ))}

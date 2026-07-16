@@ -9,28 +9,48 @@ export default function OrderPage() {
   const { ref } = useParams();
   const [order, setOrder] = useState(null);
   const [merchantCode, setMerchantCode] = useState("");
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     let active = true;
+    let iv = null;
     const load = async () => {
       try {
         const res = await fetch(`/api/orders/${ref}`);
+        if (res.status === 404) {
+          if (active) setNotFound(true);
+          if (iv) clearInterval(iv);
+          return;
+        }
         const data = await res.json();
         if (active && res.ok) {
           setOrder(data.order);
           setMerchantCode(data.merchantCode);
+          // Once paid there is nothing left to poll for.
+          if (data.order && data.order.status === "PAID" && iv) clearInterval(iv);
         }
       } catch {}
     };
     load();
-    const iv = setInterval(load, 4000);
+    iv = setInterval(load, 4000);
     return () => {
       active = false;
-      clearInterval(iv);
+      if (iv) clearInterval(iv);
     };
   }, [ref]);
 
-  if (!order) return <div className="py-20 text-center font-bold">...</div>;
+  if (notFound)
+    return (
+      <div className="py-20 text-center">
+        <p className="text-4xl mb-3">🔎</p>
+        <p className="font-bold text-lg">{t("orderNotFound")}</p>
+        <Link href="/" className="inline-block mt-4 bg-souq-green text-white rounded-full px-6 py-2 font-bold">
+          {t("continueShopping")}
+        </Link>
+      </div>
+    );
+
+  if (!order) return <div className="py-20 text-center font-bold" aria-busy="true">...</div>;
 
   const paid = order.status === "PAID";
 

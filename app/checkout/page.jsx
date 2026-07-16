@@ -86,6 +86,18 @@ export default function CheckoutPage() {
     }
   };
 
+  if (cart.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-4xl mb-3">🛒</p>
+        <p className="font-bold text-lg">{t("emptyCart")}</p>
+        <a href="/" className="inline-block mt-4 bg-souq-green text-white rounded-full px-6 py-2 font-bold">
+          {t("shopNow")}
+        </a>
+      </div>
+    );
+  }
+
   return (
     <div className="py-8 max-w-xl mx-auto">
       <h1 className="text-2xl font-black text-souq-green mb-5">{t("yourInfo")}</h1>
