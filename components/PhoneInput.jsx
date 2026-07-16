@@ -2,18 +2,24 @@
 import { useState } from "react";
 import { COUNTRIES } from "../lib/countries";
 
-// A phone input with a country dial-code dropdown, defaulting to Mauritania.
-// `value`/`onChange` only ever deal with the local number the person types
-// (digits only) — the dial code is a UX aid, matching how phone numbers are
-// already matched/stored (last 8 digits) throughout the app.
-export default function PhoneInput({ value, onChange, placeholder = "XXXXXXXX" }) {
+// Phone input with a country dial-code dropdown, defaulting to Mauritania.
+// `onChange` receives the local number; `onDialChange` (optional) receives
+// the selected dial code (e.g. "+222") so callers can build a collision-free
+// international identity for non-Mauritanian numbers.
+export default function PhoneInput({ value, onChange, onDialChange, placeholder = "XXXXXXXX" }) {
   const [country, setCountry] = useState(COUNTRIES[0]);
+
+  const pick = (code) => {
+    const c = COUNTRIES.find((x) => x.code === code) || COUNTRIES[0];
+    setCountry(c);
+    if (onDialChange) onDialChange(c.dial);
+  };
 
   return (
     <div className="mt-1 flex gap-2" dir="ltr">
       <select
         value={country.code}
-        onChange={(e) => setCountry(COUNTRIES.find((c) => c.code === e.target.value) || COUNTRIES[0])}
+        onChange={(e) => pick(e.target.value)}
         className="rounded-xl border border-souq-goldlight bg-white px-2 py-2.5 text-sm font-bold"
         aria-label="country code"
       >
@@ -26,6 +32,7 @@ export default function PhoneInput({ value, onChange, placeholder = "XXXXXXXX" }
       <input
         type="tel"
         dir="ltr"
+        inputMode="numeric"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

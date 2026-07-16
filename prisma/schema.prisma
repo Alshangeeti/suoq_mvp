@@ -36,6 +36,7 @@ model OtpCode {
   id        Int      @id @default(autoincrement())
   phone     String
   code      String
+  attempts  Int      @default(0)
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())

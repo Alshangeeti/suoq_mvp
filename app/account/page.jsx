@@ -24,6 +24,7 @@ export default function AccountPage() {
   // Login flow state
   const [step, setStep] = useState("phone");
   const [phone, setPhone] = useState("");
+  const [dialCode, setDialCode] = useState("+222");
   const [code, setCode] = useState("");
   const [devCode, setDevCode] = useState(null);
   const [error, setError] = useState("");
@@ -70,7 +71,7 @@ export default function AccountPage() {
       const res = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone })
+        body: JSON.stringify({ phone, dialCode })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
@@ -90,7 +91,7 @@ export default function AccountPage() {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, code })
+        body: JSON.stringify({ phone, code, dialCode })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
@@ -174,7 +175,7 @@ export default function AccountPage() {
           <div className="space-y-3">
             <label className="block">
               <span className="text-sm font-bold">رقم الهاتف</span>
-              <PhoneInput value={phone} onChange={setPhone} />
+              <PhoneInput value={phone} onChange={setPhone} onDialChange={setDialCode} />
             </label>
             {error && <p className="text-red-600 text-sm font-bold">{error}</p>}
             <button
@@ -452,9 +453,9 @@ export default function AccountPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => setQty(i.id, i.qty - 1)} className="w-8 h-8 rounded-full bg-souq-sand font-bold">−</button>
+                      <button onClick={() => setQty(i.id, i.qty - 1)} aria-label="decrease quantity" className="w-8 h-8 rounded-full bg-souq-sand font-bold">−</button>
                       <span className="w-6 text-center font-bold">{i.qty}</span>
-                      <button onClick={() => setQty(i.id, i.qty + 1)} className="w-8 h-8 rounded-full bg-souq-sand font-bold">+</button>
+                      <button onClick={() => setQty(i.id, i.qty + 1)} aria-label="increase quantity" className="w-8 h-8 rounded-full bg-souq-sand font-bold">+</button>
                     </div>
                   </div>
                 ))}
