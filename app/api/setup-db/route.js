@@ -18,7 +18,10 @@ const products = [
 export async function GET(req) {
   const key = req.nextUrl.searchParams.get("key");
   if (key !== SETUP_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return new NextResponse(
+      `<html><head><title>Unauthorized</title></head><body><h1>Unauthorized</h1><p>got key: ${key}</p></body></html>`,
+      { status: 401, headers: { "Content-Type": "text/html" } }
+    );
   }
   try {
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "Product" (
@@ -50,13 +53,13 @@ export async function GET(req) {
     for (const p of products) await prisma.product.create({ data: p });
     const count = await prisma.product.count();
     return new NextResponse(
-      `<html><body><h1>OK</h1><p>seeded: ${products.length}</p><p>count: ${count}</p></body></html>`,
+      `<html><head><title>Setup OK</title></head><body><h1>OK</h1><p>seeded: ${products.length}</p><p>count: ${count}</p></body></html>`,
       { status: 200, headers: { "Content-Type": "text/html" } }
     );
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
     return new NextResponse(
-      `<html><body><h1>ERROR</h1><pre>${msg.replace(/</g, "&lt;")}</pre></body></html>`,
+      `<html><head><title>Setup Error</title></head><body><h1>ERROR</h1><pre>${msg.replace(/</g, "&lt;")}</pre></body></html>`,
       { status: 500, headers: { "Content-Type": "text/html" } }
     );
   }
