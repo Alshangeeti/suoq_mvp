@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "../../lib/store";
 import PhoneInput from "../../components/PhoneInput";
+import { PAYMENT_METHODS } from "../../lib/payments";
 
 export default function CheckoutPage() {
   const { t, cart, total, clearCart, customer } = useStore();
@@ -12,6 +13,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("BANKILY");
 
   useEffect(() => {
     if (!customer) return;
@@ -63,7 +65,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, items: cart })
+        body: JSON.stringify({ ...form, items: cart, paymentMethod })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "failed");
@@ -166,9 +168,43 @@ export default function CheckoutPage() {
         </label>
       </div>
 
-      <div className="mt-5 bg-souq-green text-white rounded-2xl p-5 flex items-center justify-between">
-        <span className="font-bold">{t("total")}</span>
-        <span className="font-black text-xl">{total.toLocaleString()} {t("mru")}</span>
+      <div className="mt-5 bg-white rounded-2xl border border-souq-goldlight/60 p-5">
+        <p className="font-bold mb-3">{t("payMethod")}</p>
+        <div className="space-y-2">
+          {PAYMENT_METHODS.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => setPaymentMethod(m.id)}
+              className={`w-full flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-start transition ${
+                paymentMethod === m.id ? "border-souq-green bg-souq-green/5" : "border-souq-goldlight bg-white"
+              }`}
+            >
+              <span className="text-2xl">{m.icon}</span>
+              <span className="flex-1">
+                <span className="font-bold block">{t(m.labelKey)}</span>
+                <span className="text-xs text-souq-ink/60">{t(m.descKey)}</span>
+              </span>
+              <span
+                className={`w-5 h-5 rounded-full border-2 shrink-0 ${
+                  paymentMethod === m.id ? "border-souq-green bg-souq-green" : "border-souq-goldlight"
+                }`}
+                aria-hidden="true"
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 bg-souq-green text-white rounded-2xl p-5 space-y-2">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-bold">{t("delivery")}</span>
+          <span className="font-bold text-souq-goldlight">{t("deliveryFree")}</span>
+        </div>
+        <div className="flex items-center justify-between border-t border-white/20 pt-2">
+          <span className="font-bold">{t("total")}</span>
+          <span className="font-black text-xl">{total.toLocaleString()} {t("mru")}</span>
+        </div>
       </div>
       {error && <p className="mt-3 text-red-600 text-sm font-bold">{error}</p>}
       <button

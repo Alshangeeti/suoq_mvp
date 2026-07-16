@@ -51,6 +51,8 @@ model Order {
   address           String
   totalMru          Int
   status            String    @default("PENDING_PAYMENT")
+  paymentMethod     String    @default("BANKILY")
+  paymentRef        String?
   fulfillmentStatus String    @default("RECEIVED")
   itemsJson         String
   createdAt         DateTime  @default(now())

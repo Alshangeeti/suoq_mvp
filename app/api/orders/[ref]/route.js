@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { prisma } from "../../../../lib/db";
 import { NextResponse } from "next/server";
 import { isAdmin } from "../../../../lib/adminAuth";
+import { methodMode } from "../../../../lib/payments";
 
 const FULFILLMENT_STATUSES = ["RECEIVED", "IN_PROGRESS", "SHIPPED", "DELIVERED"];
 
@@ -12,11 +13,39 @@ export async function GET(req, { params }) {
     order: {
       ref: order.ref,
       status: order.status,
+      paymentMethod: order.paymentMethod,
+      paymentRef: order.paymentRef,
       fulfillmentStatus: order.fulfillmentStatus,
       totalMru: order.totalMru
     },
-    merchantCode: process.env.BANKILY_MERCHANT_CODE || "—"
+    payInfo: {
+      bankilyMerchantCode: process.env.BANKILY_MERCHANT_CODE || "",
+      masrviNumber: process.env.MASRVI_MERCHANT_NUMBER || "",
+      sedadNumber: process.env.SEDAD_MERCHANT_NUMBER || "",
+      bankDetails: process.env.BANK_TRANSFER_DETAILS || ""
+    }
   });
+}
+
+// Customer submits a transaction reference for manual payment methods
+// (Masrvi / Sedad / bank transfer) — order moves to PENDING_VERIFICATION
+// for the admin queue.
+export async function POST(req, { params }) {
+  const body = await req.json().catch(() => ({}));
+  const paymentRef = String(body.paymentRef || "").trim().slice(0, 100);
+  if (!paymentRef) return NextResponse.json({ error: "Missing reference" }, { status: 400 });
+
+  const order = await prisma.order.findUnique({ where: { ref: params.ref } });
+  if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (order.status !== "PENDING_PAYMENT" || methodMode(order.paymentMethod) !== "manual") {
+    return NextResponse.json({ error: "Not applicable" }, { status: 400 });
+  }
+
+  const updated = await prisma.order.update({
+    where: { id: order.id },
+    data: { status: "PENDING_VERIFICATION", paymentRef }
+  });
+  return NextResponse.json({ ok: true, status: updated.status });
 }
 
 export async function PATCH(req, { params }) {
@@ -27,9 +56,12 @@ export async function PATCH(req, { params }) {
   const body = await req.json().catch(() => ({}));
   const data = {};
 
-  if (body.action === "markPaid") {
+  if (body.action === "markPaid" || body.action === "approvePayment") {
     data.status = "PAID";
     data.paidAt = new Date();
+  }
+  if (body.action === "rejectPayment") {
+    data.status = "PENDING_PAYMENT";
   }
   if (body.fulfillmentStatus && FULFILLMENT_STATUSES.includes(body.fulfillmentStatus)) {
     data.fulfillmentStatus = body.fulfillmentStatus;

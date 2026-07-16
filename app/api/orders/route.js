@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { verifySessionToken } from "../../../lib/auth";
 import { normalizePhone } from "../../../lib/phone";
 import { isAdmin } from "../../../lib/adminAuth";
+import { METHOD_IDS, methodMode } from "../../../lib/payments";
 
 function makeRef() {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -18,6 +19,9 @@ export async function POST(req) {
   if (!customerName || !phone || !address || !Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
+  const paymentMethod = METHOD_IDS.includes(body.paymentMethod) ? body.paymentMethod : "BANKILY";
+  // COD orders are confirmed immediately (payment is collected at delivery).
+  const initialStatus = methodMode(paymentMethod) === "cod" ? "COD" : "PENDING_PAYMENT";
   const ids = items.map((i) => i.id);
   const dbProducts = await prisma.product.findMany({ where: { id: { in: ids } } });
   const total = items.reduce((sum, i) => {
@@ -52,6 +56,8 @@ export async function POST(req) {
           city: city || "Nouakchott",
           address,
           totalMru: total,
+          status: initialStatus,
+          paymentMethod,
           itemsJson: JSON.stringify(items),
           ...(customerId ? { customerId } : {})
         }
