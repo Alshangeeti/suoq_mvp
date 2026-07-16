@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useStore } from "../../lib/store";
+import PhoneInput from "../../components/PhoneInput";
 
 const STATUS_LABELS = {
   RECEIVED: { ar: "تم الاستلام", fr: "Reçue" },
@@ -15,6 +16,8 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [addresses, setAddresses] = useState([]);
+  const [newAddr, setNewAddr] = useState({ city: "Nouakchott", address: "" });
 
   const [step, setStep] = useState("phone");
   const [phone, setPhone] = useState("");
@@ -30,6 +33,40 @@ export default function AccountPage() {
     setOrders(data.orders || []);
     setLoading(false);
     if (data.customer && setGlobalCustomer) setGlobalCustomer(data.customer);
+    if (data.customer) loadAddresses();
+  };
+
+  const loadAddresses = async () => {
+    const res = await fetch("/api/addresses");
+    const data = await res.json();
+    setAddresses(data.addresses || []);
+  };
+
+  const addAddress = async () => {
+    if (!newAddr.city || !newAddr.address) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAddr)
+      });
+      const data = await res.json();
+      setAddresses(data.addresses || []);
+      setNewAddr({ city: "Nouakchott", address: "" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeAddress = async (id) => {
+    const res = await fetch("/api/addresses", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id })
+    });
+    const data = await res.json();
+    setAddresses(data.addresses || []);
   };
 
   useEffect(() => {
@@ -115,14 +152,7 @@ export default function AccountPage() {
           <div className="space-y-3">
             <label className="block">
               <span className="text-sm font-bold">رقم الهاتف</span>
-              <input
-                type="tel"
-                dir="ltr"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="XXXXXXXX"
-                className="mt-1 w-full rounded-xl border border-souq-goldlight bg-white px-4 py-2.5"
-              />
+              <PhoneInput value={phone} onChange={setPhone} />
             </label>
             {error && <p className="text-red-600 text-sm font-bold">{error}</p>}
             <button
@@ -204,6 +234,42 @@ export default function AccountPage() {
       <div className="flex items-center justify-between mb-5">
         <h1 className="font-black text-xl">حسابي — {customer.phone}</h1>
         <button onClick={logout} className="text-sm font-bold text-souq-green">تسجيل الخروج</button>
+      </div>
+
+      <div className="mb-6 bg-white rounded-2xl border border-souq-goldlight/60 p-4">
+        <p className="font-bold mb-3">عناويني</p>
+        <div className="space-y-2 mb-3">
+          {addresses.map((a) => (
+            <div key={a.id} className="flex items-center justify-between text-sm bg-souq-sand rounded-xl px-3 py-2">
+              <span>{a.city} — {a.address}</span>
+              <button onClick={() => removeAddress(a.id)} className="text-red-600 font-bold text-xs">حذف</button>
+            </div>
+          ))}
+          {addresses.length === 0 && <p className="text-sm text-souq-ink/40">لا توجد عناوين محفوظة</p>}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="text"
+            value={newAddr.city}
+            onChange={(e) => setNewAddr({ ...newAddr, city: e.target.value })}
+            placeholder="المدينة"
+            className="flex-1 min-w-[100px] rounded-xl border border-souq-goldlight bg-white px-3 py-2 text-sm"
+          />
+          <input
+            type="text"
+            value={newAddr.address}
+            onChange={(e) => setNewAddr({ ...newAddr, address: e.target.value })}
+            placeholder="العنوان بالتفصيل"
+            className="flex-[2] min-w-[150px] rounded-xl border border-souq-goldlight bg-white px-3 py-2 text-sm"
+          />
+          <button
+            disabled={busy}
+            onClick={addAddress}
+            className="text-sm font-bold bg-souq-green text-white rounded-xl px-4 py-2 disabled:opacity-50"
+          >
+            إضافة
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">
