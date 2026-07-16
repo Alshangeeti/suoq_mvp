@@ -32,7 +32,7 @@ export default function OrderPage() {
         if (active && res.ok) {
           setOrder(data.order);
           setPayInfo(data.payInfo || {});
-          const done = data.order && (data.order.status === "PAID" || data.order.status === "COD");
+          const done = data.order && (data.order.status === "PAID" || data.order.status === "COD" || data.order.status === "REJECTED");
           const manualWaiting = data.order && data.order.status === "PENDING_VERIFICATION";
           if ((done || manualWaiting) && iv) clearInterval(iv);
         }
@@ -80,6 +80,7 @@ export default function OrderPage() {
 
   const confirmed = order.status === "PAID" || order.status === "COD";
   const pendingVerification = order.status === "PENDING_VERIFICATION";
+  const rejected = order.status === "REJECTED";
   const currentStepIndex = STEPS.indexOf(order.fulfillmentStatus || "RECEIVED");
 
   const timeline = (
@@ -102,6 +103,29 @@ export default function OrderPage() {
       </div>
     </div>
   );
+
+  if (rejected) {
+    const reasonKey = "r" + (order.rejectionReason || "");
+    const reasonText = t(reasonKey) !== reasonKey ? t(reasonKey) : order.rejectionReason;
+    return (
+      <div className="py-8 max-w-xl mx-auto">
+        <div className="bg-white rounded-2xl border-2 border-red-300 p-8 text-center">
+          <p className="text-5xl mb-3">❌</p>
+          <h1 className="text-2xl font-black text-red-600">{t("orderRejected")}</h1>
+          <p className="mt-3 text-souq-ink/80 font-bold">
+            {t("reasonLabel")}: {reasonText}
+          </p>
+          {order.rejectionNote && <p className="mt-1 text-souq-ink/70">{order.rejectionNote}</p>}
+          <p className="mt-4 text-sm font-bold">
+            {t("orderRef")}: <span className="font-mono">{order.ref}</span>
+          </p>
+          <Link href="/" className="inline-block mt-6 bg-souq-green text-white rounded-full px-6 py-2 font-bold">
+            {t("continueShopping")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (confirmed) {
     const cod = order.status === "COD";

@@ -9,7 +9,13 @@ const STATUS_BADGE = {
   PAID: "bg-souq-green text-white",
   COD: "bg-souq-deep text-white",
   PENDING_VERIFICATION: "bg-souq-gold text-souq-deep",
-  PENDING_PAYMENT: "bg-souq-gold/30 text-souq-deep"
+  PENDING_PAYMENT: "bg-souq-gold/30 text-souq-deep",
+  REJECTED: "bg-red-600 text-white"
+};
+
+const REASON_LABELS = {
+  PAYMENT_NOT_COMPLETED: "Payment not completed",
+  DUPLICATE_ORDER: "Duplicate order"
 };
 
 export default function AdminPage() {
@@ -20,6 +26,9 @@ export default function AdminPage() {
   const [tab, setTab] = useState("orders");
   const [form, setForm] = useState(EMPTY_PRODUCT);
   const [busy, setBusy] = useState(false);
+  const [rejecting, setRejecting] = useState(null); // order ref being rejected
+  const [rejectReason, setRejectReason] = useState("PAYMENT_NOT_COMPLETED");
+  const [rejectNote, setRejectNote] = useState("");
 
   const load = async (k = key) => {
     setError("");
@@ -40,6 +49,13 @@ export default function AdminPage() {
       body: JSON.stringify(body)
     });
     load();
+  };
+
+  const submitReject = async (ref) => {
+    await patchOrder(ref, { action: "rejectOrder", reasonCode: rejectReason, reasonNote: rejectNote });
+    setRejecting(null);
+    setRejectNote("");
+    setRejectReason("PAYMENT_NOT_COMPLETED");
   };
 
   const saveProduct = async () => {
@@ -135,9 +151,57 @@ export default function AdminPage() {
                 <option value="SHIPPED">Shipped</option>
                 <option value="DELIVERED">Delivered</option>
               </select>
+              {o.status !== "REJECTED" && o.status !== "PAID" && o.status !== "COD" && (
+                <button
+                  onClick={() => setRejecting(rejecting === o.ref ? null : o.ref)}
+                  className="text-xs font-bold border border-red-500 text-red-600 rounded-full px-3 py-1"
+                >
+                  Reject
+                </button>
+              )}
+              {o.status === "REJECTED" && (
+                <button
+                  onClick={() => patchOrder(o.ref, { action: "unreject" })}
+                  className="text-xs font-bold border border-souq-goldlight text-souq-ink/60 rounded-full px-3 py-1"
+                >
+                  Undo reject
+                </button>
+              )}
             </>
           )}
         </div>
+        {o.status === "REJECTED" && o.rejectionReason && (
+          <p className="mt-2 text-sm font-bold text-red-600">
+            Rejected: {REASON_LABELS[o.rejectionReason] || o.rejectionReason}
+            {o.rejectionNote ? ` — ${o.rejectionNote}` : ""}
+          </p>
+        )}
+        {rejecting === o.ref && (
+          <div className="mt-3 pt-3 border-t border-red-200 flex flex-wrap items-center gap-2">
+            <select
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="text-sm font-bold border border-souq-goldlight rounded-xl px-3 py-2 bg-white"
+              aria-label="rejection reason"
+            >
+              <option value="PAYMENT_NOT_COMPLETED">Payment not completed</option>
+              <option value="DUPLICATE_ORDER">Duplicate order</option>
+            </select>
+            <input
+              type="text"
+              value={rejectNote}
+              onChange={(e) => setRejectNote(e.target.value)}
+              placeholder="Optional note shown to the customer"
+              className="flex-1 min-w-[200px] text-sm border border-souq-goldlight rounded-xl px-3 py-2"
+            />
+            <button onClick={() => submitReject(o.ref)} className="text-sm font-bold bg-red-600 text-white rounded-full px-4 py-2">
+              Confirm reject
+            </button>
+            <button onClick={() => setRejecting(null)} className="text-sm font-bold text-souq-ink/60 px-2">
+              Cancel
+            </button>
+          </div>
+        )}
         {o.paymentRef && (
           <p className="mt-2 text-sm font-bold text-souq-deep">Payment ref: <span className="font-mono">{o.paymentRef}</span></p>
         )}

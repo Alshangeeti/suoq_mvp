@@ -16,6 +16,8 @@ export async function GET(req, { params }) {
       paymentMethod: order.paymentMethod,
       paymentRef: order.paymentRef,
       fulfillmentStatus: order.fulfillmentStatus,
+      rejectionReason: order.rejectionReason,
+      rejectionNote: order.rejectionNote,
       totalMru: order.totalMru
     },
     payInfo: {
@@ -62,6 +64,17 @@ export async function PATCH(req, { params }) {
   }
   if (body.action === "rejectPayment") {
     data.status = "PENDING_PAYMENT";
+  }
+  if (body.action === "rejectOrder") {
+    const REASONS = ["PAYMENT_NOT_COMPLETED", "DUPLICATE_ORDER"];
+    data.status = "REJECTED";
+    data.rejectionReason = REASONS.includes(body.reasonCode) ? body.reasonCode : "PAYMENT_NOT_COMPLETED";
+    data.rejectionNote = String(body.reasonNote || "").trim().slice(0, 300) || null;
+  }
+  if (body.action === "unreject") {
+    data.status = "PENDING_PAYMENT";
+    data.rejectionReason = null;
+    data.rejectionNote = null;
   }
   if (body.fulfillmentStatus && FULFILLMENT_STATUSES.includes(body.fulfillmentStatus)) {
     data.fulfillmentStatus = body.fulfillmentStatus;

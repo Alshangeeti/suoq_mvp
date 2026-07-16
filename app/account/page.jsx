@@ -390,13 +390,47 @@ export default function AccountPage() {
               items = JSON.parse(o.itemsJson || "[]");
             } catch {}
             const currentStepIndex = STEPS.indexOf(o.fulfillmentStatus || "RECEIVED");
+            const confirmed = o.status === "PAID" || o.status === "COD";
+            const rejected = o.status === "REJECTED";
+            const awaitingPayment = o.status === "PENDING_PAYMENT";
+            const awaitingVerification = o.status === "PENDING_VERIFICATION";
             return (
-              <div key={o.ref} className="bg-white rounded-2xl border border-souq-goldlight/60 p-4">
+              <div key={o.ref} className={`bg-white rounded-2xl border p-4 ${rejected ? "border-red-300" : "border-souq-goldlight/60"}`}>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-mono font-bold">{o.ref}</span>
                   <span className="font-black text-souq-green">{o.totalMru.toLocaleString()} MRU</span>
                 </div>
 
+                {rejected && (
+                  <div className="my-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                    <p className="text-sm font-black text-red-600">{t("orderRejected")}</p>
+                    <p className="text-sm text-red-700 mt-0.5">
+                      {t("reasonLabel")}: {t("r" + o.rejectionReason) !== "r" + o.rejectionReason ? t("r" + o.rejectionReason) : o.rejectionReason}
+                      {o.rejectionNote ? ` — ${o.rejectionNote}` : ""}
+                    </p>
+                  </div>
+                )}
+
+                {awaitingPayment && (
+                  <div className="my-3 flex items-center justify-between bg-souq-gold/15 border border-souq-gold/50 rounded-xl px-3 py-2">
+                    <span className="text-sm font-black text-souq-deep flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-souq-gold animate-pulse" />
+                      {t("pendingPayment")}
+                    </span>
+                    <Link href={`/order/${o.ref}`} className="text-sm font-bold bg-souq-green text-white rounded-full px-4 py-1.5">
+                      {t("completePayment")}
+                    </Link>
+                  </div>
+                )}
+
+                {awaitingVerification && (
+                  <div className="my-3 bg-souq-gold/15 border border-souq-gold/50 rounded-xl px-3 py-2">
+                    <span className="text-sm font-black text-souq-deep">🕐 {t("pendingVerification")}</span>
+                  </div>
+                )}
+
+                {confirmed && (
+                <>
                 <div className="flex items-center gap-1 my-3">
                   {STEPS.map((s, i) => (
                     <div key={s} className="flex-1 flex items-center">
@@ -414,6 +448,8 @@ export default function AccountPage() {
                 <p className="text-sm font-bold text-souq-green mb-3">
                   {STATUS_LABELS[o.fulfillmentStatus]?.ar || o.fulfillmentStatus}
                 </p>
+                </>
+                )}
 
                 <div className="text-sm space-y-1 border-t border-souq-goldlight/40 pt-2">
                   {items.map((it, idx) => (
