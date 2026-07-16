@@ -1,10 +1,25 @@
 "use client";
 import { useState } from "react";
 
+const EMPTY_PRODUCT = {
+  id: null, nameAr: "", nameFr: "", descAr: "", descFr: "",
+  priceMru: "", category: "home", emoji: "📦", stocked: false
+};
+const STATUS_BADGE = {
+  PAID: "bg-souq-green text-white",
+  COD: "bg-souq-deep text-white",
+  PENDING_VERIFICATION: "bg-souq-gold text-souq-deep",
+  PENDING_PAYMENT: "bg-souq-gold/30 text-souq-deep"
+};
+
 export default function AdminPage() {
   const [key, setKey] = useState("");
   const [orders, setOrders] = useState(null);
+  const [products, setProducts] = useState([]);
   const [error, setError] = useState("");
+  const [tab, setTab] = useState("orders");
+  const [form, setForm] = useState(EMPTY_PRODUCT);
+  const [busy, setBusy] = useState(false);
 
   const load = async (k = key) => {
     setError("");
@@ -14,22 +29,43 @@ export default function AdminPage() {
       return;
     }
     setOrders(await res.json());
+    const pr = await fetch("/api/products");
+    if (pr.ok) setProducts(await pr.json());
   };
 
-  const markPaid = async (ref) => {
+  const patchOrder = async (ref, body) => {
     await fetch(`/api/orders/${ref}`, {
       method: "PATCH",
       headers: { "x-admin-key": key, "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "markPaid" })
+      body: JSON.stringify(body)
     });
     load();
   };
 
-  const updateFulfillment = async (ref, fulfillmentStatus) => {
-    await fetch(`/api/orders/${ref}`, {
-      method: "PATCH",
+  const saveProduct = async () => {
+    setBusy(true);
+    try {
+      const method = form.id ? "PUT" : "POST";
+      const res = await fetch("/api/admin/products", {
+        method,
+        headers: { "x-admin-key": key, "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      });
+      if (res.ok) {
+        setForm(EMPTY_PRODUCT);
+        load();
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteProduct = async (id) => {
+    if (!confirm("Delete this product?")) return;
+    await fetch("/api/admin/products", {
+      method: "DELETE",
       headers: { "x-admin-key": key, "Content-Type": "application/json" },
-      body: JSON.stringify({ fulfillmentStatus })
+      body: JSON.stringify({ id })
     });
     load();
   };
@@ -52,65 +88,177 @@ export default function AdminPage() {
       </div>
     );
 
+  const today = new Date().toDateString();
+  const todayOrders = orders.filter((o) => new Date(o.createdAt).toDateString() === today);
+  const todayRevenue = todayOrders
+    .filter((o) => o.status === "PAID" || o.status === "COD")
+    .reduce((s, o) => s + o.totalMru, 0);
+  const pendingVerifications = orders.filter((o) => o.status === "PENDING_VERIFICATION");
+
+  const renderOrder = (o, verification = false) => {
+    let items = [];
+    try { items = JSON.parse(o.itemsJson || "[]"); } catch {}
+    return (
+      <div key={o.ref} className={`bg-white rounded-2xl border p-4 ${verification ? "border-souq-gold" : "border-souq-goldlight/60"}`}>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-mono font-bold">{o.ref}</span>
+          <span className="flex-1 text-sm">{o.customerName} · {o.phone} · {o.city}</span>
+          <span className="text-xs font-bold text-souq-ink/50">{o.paymentMethod}</span>
+          <span className="font-black text-souq-green">{o.totalMru.toLocaleString()} MRU</span>
+          <span className={`text-xs font-bold rounded-full px-3 py-1 ${STATUS_BADGE[o.status] || "bg-souq-goldlight"}`}>
+            {o.status}
+          </span>
+          {verification ? (
+            <>
+              <button onClick={() => patchOrder(o.ref, { action: "approvePayment" })} className="text-xs font-bold bg-souq-green text-white rounded-full px-3 py-1">
+                ✓ Approve
+              </button>
+              <button onClick={() => patchOrder(o.ref, { action: "rejectPayment" })} className="text-xs font-bold border border-red-500 text-red-600 rounded-full px-3 py-1">
+                ✗ Reject
+              </button>
+            </>
+          ) : (
+            <>
+              {o.status === "PENDING_PAYMENT" && (
+                <button onClick={() => patchOrder(o.ref, { action: "markPaid" })} className="text-xs font-bold border border-souq-green text-souq-green rounded-full px-3 py-1">
+                  Mark paid
+                </button>
+              )}
+              <select
+                value={o.fulfillmentStatus || "RECEIVED"}
+                onChange={(e) => patchOrder(o.ref, { fulfillmentStatus: e.target.value })}
+                className="text-xs font-bold border border-souq-goldlight rounded-full px-2 py-1 bg-white"
+                aria-label="fulfillment status"
+              >
+                <option value="RECEIVED">Received</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="SHIPPED">Shipped</option>
+                <option value="DELIVERED">Delivered</option>
+              </select>
+            </>
+          )}
+        </div>
+        {o.paymentRef && (
+          <p className="mt-2 text-sm font-bold text-souq-deep">Payment ref: <span className="font-mono">{o.paymentRef}</span></p>
+        )}
+        {items.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-souq-goldlight/40 text-sm space-y-1">
+            {items.map((it, idx) => (
+              <div key={idx} className="flex justify-between text-souq-ink/80">
+                <span>{it.emoji} {it.nameFr || it.nameAr} × {it.qty}</span>
+                <span>{(it.priceMru * it.qty).toLocaleString()} MRU</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="py-8" dir="ltr">
       <div className="flex items-center justify-between mb-5">
-        <h1 className="font-black text-xl">Orders ({orders.length})</h1>
+        <h1 className="font-black text-xl">Admin</h1>
         <button onClick={() => load()} className="text-sm font-bold text-souq-green">↻ Refresh</button>
       </div>
-      <div className="space-y-3">
-        {orders.map((o) => {
-          let items = [];
-          try {
-            items = JSON.parse(o.itemsJson || "[]");
-          } catch {}
-          return (
-            <div key={o.ref} className="bg-white rounded-2xl border border-souq-goldlight/60 p-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-mono font-bold">{o.ref}</span>
-                <span className="flex-1 text-sm">{o.customerName} · {o.phone} · {o.city}</span>
-                <span className="font-black text-souq-green">{o.totalMru.toLocaleString()} MRU</span>
-                <span
-                  className={`text-xs font-bold rounded-full px-3 py-1 ${
-                    o.status === "PAID" ? "bg-souq-green text-white" : "bg-souq-gold/30 text-souq-deep"
-                  }`}
-                >
-                  {o.status}
-                </span>
-                {o.status !== "PAID" && (
-                  <button onClick={() => markPaid(o.ref)} className="text-xs font-bold border border-souq-green text-souq-green rounded-full px-3 py-1">
-                    Mark paid
-                  </button>
-                )}
-                <select
-                  value={o.fulfillmentStatus || "RECEIVED"}
-                  onChange={(e) => updateFulfillment(o.ref, e.target.value)}
-                  className="text-xs font-bold border border-souq-goldlight rounded-full px-2 py-1 bg-white"
-                >
-                  <option value="RECEIVED">Received</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="SHIPPED">Shipped</option>
-                  <option value="DELIVERED">Delivered</option>
+
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="bg-white rounded-2xl border border-souq-goldlight/60 p-4 text-center">
+          <p className="text-2xl font-black text-souq-green">{todayOrders.length}</p>
+          <p className="text-xs font-bold text-souq-ink/60">Orders today</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-souq-goldlight/60 p-4 text-center">
+          <p className="text-2xl font-black text-souq-green">{todayRevenue.toLocaleString()}</p>
+          <p className="text-xs font-bold text-souq-ink/60">Revenue today (MRU)</p>
+        </div>
+        <div className={`rounded-2xl border p-4 text-center ${pendingVerifications.length ? "bg-souq-gold/20 border-souq-gold" : "bg-white border-souq-goldlight/60"}`}>
+          <p className="text-2xl font-black text-souq-deep">{pendingVerifications.length}</p>
+          <p className="text-xs font-bold text-souq-ink/60">Pending verification</p>
+        </div>
+      </div>
+
+      {pendingVerifications.length > 0 && (
+        <section className="mb-6">
+          <h2 className="font-black mb-3">⚠ Payment verification queue</h2>
+          <div className="space-y-3">{pendingVerifications.map((o) => renderOrder(o, true))}</div>
+        </section>
+      )}
+
+      <div className="flex gap-1 mb-5 bg-white rounded-full border border-souq-goldlight/60 p-1 w-fit">
+        {["orders", "products"].map((k) => (
+          <button
+            key={k}
+            onClick={() => setTab(k)}
+            className={`text-sm font-bold rounded-full py-2 px-5 capitalize ${tab === k ? "bg-souq-green text-white" : "text-souq-ink/70"}`}
+          >
+            {k} ({k === "orders" ? orders.length : products.length})
+          </button>
+        ))}
+      </div>
+
+      {tab === "orders" && (
+        <div className="space-y-3">
+          {orders.map((o) => renderOrder(o))}
+          {orders.length === 0 && <p className="text-center text-souq-ink/50 py-10">No orders yet</p>}
+        </div>
+      )}
+
+      {tab === "products" && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-souq-goldlight/60 p-4">
+            <h2 className="font-black mb-3">{form.id ? `Edit product #${form.id}` : "Add product"}</h2>
+            <div className="grid md:grid-cols-2 gap-3">
+              <input value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} placeholder="Name (Arabic)" dir="rtl" className="rounded-xl border border-souq-goldlight px-3 py-2" />
+              <input value={form.nameFr} onChange={(e) => setForm({ ...form, nameFr: e.target.value })} placeholder="Name (French)" className="rounded-xl border border-souq-goldlight px-3 py-2" />
+              <input value={form.descAr} onChange={(e) => setForm({ ...form, descAr: e.target.value })} placeholder="Description (Arabic)" dir="rtl" className="rounded-xl border border-souq-goldlight px-3 py-2" />
+              <input value={form.descFr} onChange={(e) => setForm({ ...form, descFr: e.target.value })} placeholder="Description (French)" className="rounded-xl border border-souq-goldlight px-3 py-2" />
+              <input value={form.priceMru} onChange={(e) => setForm({ ...form, priceMru: e.target.value })} placeholder="Price (MRU)" type="number" className="rounded-xl border border-souq-goldlight px-3 py-2" />
+              <div className="flex gap-2">
+                <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="flex-1 rounded-xl border border-souq-goldlight px-3 py-2 bg-white" aria-label="category">
+                  <option value="electronics">Electronics</option>
+                  <option value="home">Home</option>
+                  <option value="fashion">Fashion</option>
+                  <option value="beauty">Beauty</option>
                 </select>
+                <input value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })} placeholder="Emoji" className="w-20 rounded-xl border border-souq-goldlight px-3 py-2 text-center" />
               </div>
-              {items.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-souq-goldlight/40 text-sm space-y-1">
-                  {items.map((it, idx) => (
-                    <div key={idx} className="flex justify-between text-souq-ink/80">
-                      <span>{it.emoji} {it.nameFr || it.nameAr} × {it.qty}</span>
-                      <span>{(it.priceMru * it.qty).toLocaleString()} MRU</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {items.length === 0 && (
-                <p className="mt-3 pt-3 border-t border-souq-goldlight/40 text-xs text-souq-ink/40">Address: {o.address}</p>
+            </div>
+            <label className="flex items-center gap-2 mt-3 text-sm font-bold">
+              <input type="checkbox" checked={form.stocked} onChange={(e) => setForm({ ...form, stocked: e.target.checked })} />
+              In stock in Guangzhou warehouse (3-5 day delivery)
+            </label>
+            <div className="flex gap-2 mt-4">
+              <button disabled={busy} onClick={saveProduct} className="bg-souq-green text-white font-bold rounded-full px-6 py-2 disabled:opacity-50">
+                {form.id ? "Save changes" : "Add product"}
+              </button>
+              {form.id && (
+                <button onClick={() => setForm(EMPTY_PRODUCT)} className="text-sm font-bold text-souq-ink/60 px-3">
+                  Cancel
+                </button>
               )}
             </div>
-          );
-        })}
-        {orders.length === 0 && <p className="text-center text-souq-ink/50 py-10">No orders yet</p>}
-      </div>
+          </div>
+
+          <div className="space-y-2">
+            {products.map((p) => (
+              <div key={p.id} className="bg-white rounded-2xl border border-souq-goldlight/60 p-3 flex items-center gap-3">
+                <span className="text-3xl">{p.emoji}</span>
+                <div className="flex-1">
+                  <p className="font-bold text-sm">{p.nameFr} · {p.nameAr}</p>
+                  <p className="text-xs text-souq-ink/50">{p.category} · {p.stocked ? "stocked" : "on-demand"}</p>
+                </div>
+                <span className="font-black text-souq-green">{p.priceMru.toLocaleString()} MRU</span>
+                <button onClick={() => setForm({ ...p, priceMru: String(p.priceMru) })} className="text-xs font-bold border border-souq-green text-souq-green rounded-full px-3 py-1">
+                  Edit
+                </button>
+                <button onClick={() => deleteProduct(p.id)} className="text-xs font-bold border border-red-500 text-red-600 rounded-full px-3 py-1">
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
