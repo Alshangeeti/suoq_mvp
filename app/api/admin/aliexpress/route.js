@@ -48,7 +48,12 @@ export async function POST(req) {
     const imageUrls = firstDefined(multimedia.image_urls, base.image_urls);
     if (typeof imageUrls === "string") images = imageUrls.split(";").filter(Boolean);
 
-    let skus = firstDefined(skuInfo.ae_item_sku_info_d_t_o, skuInfo.ae_item_sku_info_dto, []);
+    // The SKU list arrives either as a plain array or wrapped in a
+    // *_d_t_o / *_dto object depending on the product/gateway version.
+    let skus = skuInfo;
+    if (!Array.isArray(skus)) {
+      skus = firstDefined(skuInfo.ae_item_sku_info_d_t_o, skuInfo.ae_item_sku_info_dto, []);
+    }
     if (!Array.isArray(skus)) skus = [skus].filter(Boolean);
     const prices = skus
       .map((s) => parseFloat(firstDefined(s.offer_sale_price, s.sku_price, s.offer_bulk_sale_price)))
