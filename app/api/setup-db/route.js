@@ -48,8 +48,16 @@ export async function GET(req) {
     await prisma.order.deleteMany();
     await prisma.product.deleteMany();
     for (const p of products) await prisma.product.create({ data: p });
-    return NextResponse.json({ ok: true, seeded: products.length });
+    const count = await prisma.product.count();
+    return new NextResponse(
+      `<html><body><h1>OK</h1><p>seeded: ${products.length}</p><p>count: ${count}</p></body></html>`,
+      { status: 200, headers: { "Content-Type": "text/html" } }
+    );
   } catch (e) {
-    return NextResponse.json({ error: String(e && e.message ? e.message : e) }, { status: 500 });
+    const msg = String(e && e.message ? e.message : e);
+    return new NextResponse(
+      `<html><body><h1>ERROR</h1><pre>${msg.replace(/</g, "&lt;")}</pre></body></html>`,
+      { status: 500, headers: { "Content-Type": "text/html" } }
+    );
   }
 }
