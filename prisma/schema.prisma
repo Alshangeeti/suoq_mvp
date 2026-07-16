@@ -62,3 +62,13 @@ model Order {
   customerId        Int?
   customer          Customer? @relation(fields: [customerId], references: [id])
 }
+
+model AppToken {
+  id           Int      @id @default(autoincrement())
+  provider     String   @unique
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  rawJson      String   @default("{}")
+  updatedAt    DateTime @updatedAt
+}
