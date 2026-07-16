@@ -30,9 +30,9 @@ async function tryVariant(name, url) {
   }
 }
 
-export default async function DebugAE({ searchParams }) {
+async function runDiagnostics(searchParams) {
   if (searchParams?.key !== DEBUG_KEY) {
-    return <div className="py-10 font-bold">Unauthorized</div>;
+    return { env: null, results: [], summary: "UNAUTHORIZED" };
   }
 
   const appKey = process.env.ALIEXPRESS_APP_KEY || "535648";
@@ -98,6 +98,21 @@ export default async function DebugAE({ searchParams }) {
     }
   }
 
+  const summary =
+    `kL${env.appKeyLength}${env.appKeyHasWhitespace ? "WS" : ""}` +
+    `_sL${env.secretLength}${env.secretHasWhitespace ? "WS" : ""}` +
+    "__" +
+    results.map((r) => `${r.name.split(" ")[0]}=${r.code || r.status}`).join("_");
+  return { env, results, summary };
+}
+
+export async function generateMetadata({ searchParams }) {
+  const { summary } = await runDiagnostics(searchParams);
+  return { title: summary };
+}
+
+export default async function DebugAE({ searchParams }) {
+  const { env, results } = await runDiagnostics(searchParams);
   return (
     <div className="py-10" dir="ltr">
       <h1 className="font-black text-xl mb-4">AE Debug</h1>
