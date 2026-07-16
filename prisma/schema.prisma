@@ -24,6 +24,7 @@ model Customer {
   phone     String   @unique
   name      String?
   verified  Boolean  @default(false)
+  cartJson  String   @default("[]")
   createdAt DateTime @default(now())
   orders    Order[]
 }

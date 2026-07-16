@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useStore } from "../../lib/store";
 
 const STATUS_LABELS = {
   RECEIVED: { ar: "تم الاستلام", fr: "Reçue" },
@@ -10,6 +11,7 @@ const STATUS_LABELS = {
 const STEPS = ["RECEIVED", "IN_PROGRESS", "SHIPPED", "DELIVERED"];
 
 export default function AccountPage() {
+  const { setCustomer: setGlobalCustomer } = useStore();
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState(null);
   const [orders, setOrders] = useState([]);
@@ -27,6 +29,7 @@ export default function AccountPage() {
     setCustomer(data.customer);
     setOrders(data.orders || []);
     setLoading(false);
+    if (data.customer && setGlobalCustomer) setGlobalCustomer(data.customer);
   };
 
   useEffect(() => {
@@ -80,6 +83,7 @@ export default function AccountPage() {
     await fetch("/api/auth/logout", { method: "POST" });
     setCustomer(null);
     setOrders([]);
+    if (setGlobalCustomer) setGlobalCustomer(null);
   };
 
   if (loading) return <div className="py-16 text-center text-souq-ink/50">...</div>;
