@@ -2,9 +2,7 @@ export const dynamic = "force-dynamic";
 import { prisma } from "../../../../lib/db";
 import { NextResponse } from "next/server";
 import { isAdmin } from "../../../../lib/adminAuth";
-import { CATEGORY_TREE } from "../../../../lib/categories";
 
-const ALL_SUB_SLUGS = CATEGORY_TREE.flatMap((c) => c.subs.map((s) => s.slug));
 
 export async function GET(req) {
   if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,7 +17,8 @@ export async function POST(req) {
   const body = await req.json().catch(() => ({}));
   const slug = String(body.slug || "");
   const imageUrl = String(body.imageUrl || "").trim().slice(0, 500);
-  if (!ALL_SUB_SLUGS.includes(slug)) {
+  const sub = await prisma.subcategory.findUnique({ where: { slug } });
+  if (!sub) {
     return NextResponse.json({ error: "Unknown subcategory" }, { status: 400 });
   }
   if (imageUrl && !imageUrl.startsWith("http")) {

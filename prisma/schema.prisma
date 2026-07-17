@@ -88,3 +88,21 @@ model CategoryImage {
   slug     String @unique
   imageUrl String
 }
+
+model Category {
+  id    Int           @id @default(autoincrement())
+  slug  String        @unique
+  ar    String
+  fr    String
+  order Int           @default(0)
+  subs  Subcategory[]
+}
+
+model Subcategory {
+  id         Int      @id @default(autoincrement())
+  slug       String   @unique
+  ar         String
+  fr         String
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}

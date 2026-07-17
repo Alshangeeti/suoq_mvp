@@ -2,19 +2,24 @@ export const dynamic = "force-dynamic";
 import { prisma } from "../../../../lib/db";
 import { NextResponse } from "next/server";
 import { isAdmin } from "../../../../lib/adminAuth";
-import { MAIN_SLUGS, isValidSub } from "../../../../lib/categories";
 
-const CATEGORIES = MAIN_SLUGS;
 
-function cleanProduct(body) {
+async function cleanProduct(body) {
+  const CATEGORIES = (await prisma.category.findMany({ select: { slug: true } })).map((x) => x.slug);
   const nameAr = String(body.nameAr || "").trim().slice(0, 200);
   const nameFr = String(body.nameFr || "").trim().slice(0, 200);
   const descAr = String(body.descAr || "").trim().slice(0, 500);
   const descFr = String(body.descFr || "").trim().slice(0, 500);
   const priceMru = parseInt(body.priceMru, 10);
-  const category = CATEGORIES.includes(body.category) ? body.category : "home";
-  const subcategory =
-    body.subcategory && isValidSub(category, body.subcategory) ? body.subcategory : null;
+  const category = CATEGORIES.includes(body.category) ? body.category : (CATEGORIES[0] || "home");
+  let subcategory = null;
+  if (body.subcategory) {
+    const sub = await prisma.subcategory.findUnique({
+      where: { slug: String(body.subcategory) },
+      include: { category: true }
+    });
+    if (sub && sub.category.slug === category) subcategory = sub.slug;
+  }
   const emoji = String(body.emoji || "📦").slice(0, 8);
   const stocked = !!body.stocked;
   const imageUrl = String(body.imageUrl || "").trim().slice(0, 500) || null;
@@ -40,7 +45,7 @@ function cleanProduct(body) {
 export async function POST(req) {
   if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const data = cleanProduct(body);
+  const data = await cleanProduct(body);
   if (!data) return NextResponse.json({ error: "Invalid product" }, { status: 400 });
   const product = await prisma.product.create({ data });
   return NextResponse.json({ ok: true, product });
@@ -50,7 +55,7 @@ export async function PUT(req) {
   if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const id = parseInt(body.id, 10);
-  const data = cleanProduct(body);
+  const data = await cleanProduct(body);
   if (Number.isNaN(id) || !data) return NextResponse.json({ error: "Invalid product" }, { status: 400 });
   const product = await prisma.product.update({ where: { id }, data });
   return NextResponse.json({ ok: true, product });

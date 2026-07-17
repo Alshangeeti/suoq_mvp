@@ -2,15 +2,14 @@
 import { useState } from "react";
 import { useStore } from "../lib/store";
 import ProductCard from "./ProductCard";
-import { CATEGORY_TREE, MAIN_SLUGS } from "../lib/categories";
 
-export default function HomeClient({ products = [], loadError = false, initialCat = "all", initialSub = "", initialQuery = "" }) {
+export default function HomeClient({ products = [], tree = [], loadError = false, initialCat = "all", initialSub = "", initialQuery = "" }) {
   const { t, lang } = useStore();
-  const [cat, setCat] = useState(MAIN_SLUGS.includes(initialCat) ? initialCat : "all");
+  const [cat, setCat] = useState(tree.some((x) => x.slug === initialCat) ? initialCat : "all");
   const [sub, setSub] = useState(initialSub || "");
   const [query, setQuery] = useState(initialQuery);
   const catName = (item) => (lang === "ar" ? item.ar : item.fr);
-  const activeTree = CATEGORY_TREE.find((x) => x.slug === cat);
+  const activeTree = tree.find((x) => x.slug === cat);
 
   let byCat = cat === "all" ? products : products.filter((p) => p.category === cat);
   if (cat !== "all" && sub) byCat = byCat.filter((p) => p.subcategory === sub);
@@ -63,7 +62,7 @@ export default function HomeClient({ products = [], loadError = false, initialCa
         >
           {t("all")}
         </button>
-        {CATEGORY_TREE.map((c2) => (
+        {tree.map((c2) => (
           <button
             key={c2.slug}
             onClick={() => { setCat(c2.slug); setSub(""); }}

@@ -1,7 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { CATEGORY_TREE } from "../lib/categories";
 import { useStore } from "../lib/store";
 
 // Hamburger beside the logo. Hover (desktop) or tap opens a dropdown of main
@@ -9,8 +8,16 @@ import { useStore } from "../lib/store";
 export default function HeaderCategoryMenu() {
   const { lang } = useStore();
   const [open, setOpen] = useState(false);
+  const [tree, setTree] = useState([]);
   const wrapRef = useRef(null);
   const closeTimer = useRef(null);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((d) => setTree(d.tree || []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onClickOutside = (e) => {
@@ -50,7 +57,7 @@ export default function HeaderCategoryMenu() {
 
       {open && (
         <div className="absolute start-0 top-full mt-1 z-50 w-64 max-h-[70vh] overflow-y-auto bg-white text-souq-ink rounded-2xl shadow-2xl border border-souq-goldlight/60 py-2">
-          {CATEGORY_TREE.map((cat) => (
+          {tree.map((cat) => (
             <Link
               key={cat.slug}
               href={`/category/${cat.slug}`}

@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { prisma } from "../../../lib/db";
 import { notFound } from "next/navigation";
 import ProductDetailClient from "../../../components/ProductDetailClient";
+import { findCategoryDb } from "../../../lib/categories";
 
 export default async function ProductPage({ params }) {
   const id = parseInt(params.id, 10);
@@ -14,6 +15,7 @@ export default async function ProductPage({ params }) {
     where: { category: product.category, id: { not: id } },
     take: 4
   });
+  const catInfo = await findCategoryDb(product.category);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -31,7 +33,7 @@ export default async function ProductPage({ params }) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ProductDetailClient product={product} related={related} />
+      <ProductDetailClient product={product} related={related} catInfo={catInfo} />
     </>
   );
 }

@@ -1,11 +1,11 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "../../../lib/db";
 import { notFound } from "next/navigation";
-import { findCategory } from "../../../lib/categories";
+import { findCategoryDb } from "../../../lib/categories";
 import CategoryClient from "../../../components/CategoryClient";
 
 export default async function CategoryPage({ params }) {
-  const cat = findCategory(params.slug);
+  const cat = await findCategoryDb(params.slug);
   if (!cat) notFound();
 
   const [products, images] = await Promise.all([
@@ -22,7 +22,7 @@ export default async function CategoryPage({ params }) {
 }
 
 export async function generateMetadata({ params }) {
-  const cat = findCategory(params.slug);
+  const cat = await findCategoryDb(params.slug);
   if (!cat) return {};
   return { title: `${cat.ar} · ${cat.fr}` };
 }

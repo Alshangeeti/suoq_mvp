@@ -1,14 +1,17 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "../lib/db";
 import HomeClient from "../components/HomeClient";
+import { getCategoryTree } from "../lib/categories";
 
 // Server-rendered homepage: products arrive in the initial HTML (faster
 // first paint, crawlable content) instead of a client-side fetch.
 export default async function Home({ searchParams }) {
   let products = [];
+  let tree = [];
   let loadError = false;
   try {
     products = await prisma.product.findMany({ orderBy: { id: "asc" } });
+    tree = await getCategoryTree();
   } catch (e) {
     console.error("Home products load failed:", e);
     loadError = true;
@@ -44,6 +47,7 @@ export default async function Home({ searchParams }) {
       />
       <HomeClient
         products={products}
+        tree={tree}
         loadError={loadError}
         initialCat={searchParams?.cat || "all"}
         initialSub={searchParams?.sub || ""}

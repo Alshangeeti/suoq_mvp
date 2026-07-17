@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useStore } from "../lib/store";
 import ProductCard from "./ProductCard";
 import RecentlyViewed from "./RecentlyViewed";
-import { findCategory } from "../lib/categories";
 
 function ProductGallery({ product, name }) {
   let images = [];
@@ -45,7 +44,7 @@ function ProductGallery({ product, name }) {
   );
 }
 
-export default function ProductDetailClient({ product, related }) {
+export default function ProductDetailClient({ product, related, catInfo }) {
   const { t, lang, addToCart } = useStore();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
@@ -94,11 +93,8 @@ export default function ProductDetailClient({ product, related }) {
       <nav className="text-sm text-souq-ink/60 mb-4" aria-label="breadcrumb">
         <Link href="/" className="hover:text-souq-green font-bold">{t("homeCrumb")}</Link>
         <span className="mx-2">›</span>
-        <Link href={`/?cat=${product.category}`} className="hover:text-souq-green font-bold">
-          {(() => {
-            const c2 = findCategory(product.category);
-            return c2 ? (lang === "ar" ? c2.ar : c2.fr) : t(product.category);
-          })()}
+        <Link href={`/category/${product.category}`} className="hover:text-souq-green font-bold">
+          {catInfo ? (lang === "ar" ? catInfo.ar : catInfo.fr) : product.category}
         </Link>
         <span className="mx-2">›</span>
         <span className="text-souq-ink font-bold">{name}</span>

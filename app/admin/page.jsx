@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CATEGORY_TREE } from "../../lib/categories";
 
 const EMPTY_PRODUCT = {
   id: null, nameAr: "", nameFr: "", descAr: "", descFr: "",
@@ -35,8 +34,12 @@ export default function AdminPage() {
   const [aeError, setAeError] = useState("");
   const [aeBusy, setAeBusy] = useState(false);
   const [catImages, setCatImages] = useState({});
-  const [catImgCategory, setCatImgCategory] = useState(CATEGORY_TREE[0].slug);
+  const [catImgCategory, setCatImgCategory] = useState("");
   const [catImgSaved, setCatImgSaved] = useState("");
+  const [catTree, setCatTree] = useState([]);
+  const [newCat, setNewCat] = useState({ ar: "", fr: "" });
+  const [newSub, setNewSub] = useState({ categorySlug: "", ar: "", fr: "" });
+  const [catError, setCatError] = useState("");
 
   const load = async (k = key) => {
     setError("");
@@ -55,6 +58,53 @@ export default function AdminPage() {
       const data = await ci.json();
       setCatImages(data.images || {});
     }
+    const ct = await fetch("/api/categories");
+    if (ct.ok) {
+      const data = await ct.json();
+      setCatTree(data.tree || []);
+      if (data.tree && data.tree.length > 0) {
+        setCatImgCategory((prev) => prev || data.tree[0].slug);
+      }
+    }
+  };
+
+  const addCategory = async () => {
+    setCatError("");
+    const res = await fetch("/api/admin/categories", {
+      method: "POST",
+      headers: { "x-admin-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "addCategory", ...newCat })
+    });
+    const data = await res.json();
+    if (!res.ok) return setCatError(data.error || "Failed");
+    setNewCat({ ar: "", fr: "" });
+    load();
+  };
+
+  const addSub = async () => {
+    setCatError("");
+    const res = await fetch("/api/admin/categories", {
+      method: "POST",
+      headers: { "x-admin-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "addSub", ...newSub })
+    });
+    const data = await res.json();
+    if (!res.ok) return setCatError(data.error || "Failed");
+    setNewSub({ categorySlug: newSub.categorySlug, ar: "", fr: "" });
+    load();
+  };
+
+  const deleteCatOrSub = async (type, slug) => {
+    if (!confirm(`Delete this ${type}?`)) return;
+    setCatError("");
+    const res = await fetch("/api/admin/categories", {
+      method: "DELETE",
+      headers: { "x-admin-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ type, slug })
+    });
+    const data = await res.json();
+    if (!res.ok) return setCatError(data.error || "Failed");
+    load();
   };
 
   const saveCatImage = async (slug) => {
@@ -427,7 +477,7 @@ export default function AdminPage() {
                   className="flex-1 rounded-xl border border-souq-goldlight px-3 py-2 bg-white"
                   aria-label="category"
                 >
-                  {CATEGORY_TREE.map((c2) => (
+                  {catTree.map((c2) => (
                     <option key={c2.slug} value={c2.slug}>{c2.fr} / {c2.ar}</option>
                   ))}
                 </select>
@@ -438,7 +488,7 @@ export default function AdminPage() {
                   aria-label="subcategory"
                 >
                   <option value="">— subcategory —</option>
-                  {(CATEGORY_TREE.find((c2) => c2.slug === form.category)?.subs || []).map((s2) => (
+                  {(catTree.find((c2) => c2.slug === form.category)?.subs || []).map((s2) => (
                     <option key={s2.slug} value={s2.slug}>{s2.fr} / {s2.ar}</option>
                   ))}
                 </select>
@@ -462,6 +512,60 @@ export default function AdminPage() {
           </div>
 
           <div className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-4">
+            <h2 className="font-black mb-1">Categories &amp; subcategories</h2>
+            <p className="text-xs text-souq-ink/60 mb-3">
+              Add or delete departments and their subcategories. A category with products can't be deleted until its products are moved.
+            </p>
+            {catError && <p className="text-red-600 text-sm font-bold mb-2">{catError}</p>}
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              <input value={newCat.ar} onChange={(e) => setNewCat({ ...newCat, ar: e.target.value })} placeholder="اسم الفئة (عربي)" dir="rtl" className="flex-1 min-w-[140px] rounded-xl border border-souq-goldlight px-3 py-2 text-sm" />
+              <input value={newCat.fr} onChange={(e) => setNewCat({ ...newCat, fr: e.target.value })} placeholder="Nom (français)" className="flex-1 min-w-[140px] rounded-xl border border-souq-goldlight px-3 py-2 text-sm" />
+              <button onClick={addCategory} disabled={!newCat.ar || !newCat.fr} className="text-sm font-bold bg-souq-green text-white rounded-full px-5 py-2 disabled:opacity-50">
+                + Category
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {catTree.map((c2) => (
+                <div key={c2.slug} className="border border-souq-goldlight/50 rounded-xl p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex-1 font-bold text-sm">{c2.fr} / {c2.ar}</span>
+                    <button onClick={() => deleteCatOrSub("category", c2.slug)} className="text-xs font-bold border border-red-500 text-red-600 rounded-full px-3 py-1">
+                      Delete
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {c2.subs.map((s2) => (
+                      <span key={s2.slug} className="inline-flex items-center gap-1 text-xs bg-souq-sand rounded-full ps-3 pe-1 py-1">
+                        {s2.fr} / {s2.ar}
+                        <button onClick={() => deleteCatOrSub("sub", s2.slug)} aria-label="delete subcategory" className="w-4 h-4 rounded-full bg-red-100 text-red-600 font-bold leading-none">×</button>
+                      </span>
+                    ))}
+                    {c2.subs.length === 0 && <span className="text-xs text-souq-ink/40">no subcategories</span>}
+                  </div>
+                  {newSub.categorySlug === c2.slug ? (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <input value={newSub.ar} onChange={(e) => setNewSub({ ...newSub, ar: e.target.value })} placeholder="اسم فرعي (عربي)" dir="rtl" className="flex-1 min-w-[120px] rounded-xl border border-souq-goldlight px-3 py-1.5 text-sm" />
+                      <input value={newSub.fr} onChange={(e) => setNewSub({ ...newSub, fr: e.target.value })} placeholder="Nom (français)" className="flex-1 min-w-[120px] rounded-xl border border-souq-goldlight px-3 py-1.5 text-sm" />
+                      <button onClick={addSub} disabled={!newSub.ar || !newSub.fr} className="text-xs font-bold bg-souq-green text-white rounded-full px-4 py-1.5 disabled:opacity-50">
+                        Add
+                      </button>
+                      <button onClick={() => setNewSub({ categorySlug: "", ar: "", fr: "" })} className="text-xs font-bold text-souq-ink/50 px-2">
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setNewSub({ categorySlug: c2.slug, ar: "", fr: "" })} className="mt-2 text-xs font-bold text-souq-green">
+                      + subcategory
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-4">
             <h2 className="font-black mb-1">Subcategory photos</h2>
             <p className="text-xs text-souq-ink/60 mb-3">
               These photos appear as circles on each category page. Paste an image URL (e.g. a product photo link) and Save.
@@ -472,12 +576,12 @@ export default function AdminPage() {
               className="rounded-xl border border-souq-goldlight px-3 py-2 bg-white mb-3"
               aria-label="category for photos"
             >
-              {CATEGORY_TREE.map((c2) => (
+              {catTree.map((c2) => (
                 <option key={c2.slug} value={c2.slug}>{c2.fr} / {c2.ar}</option>
               ))}
             </select>
             <div className="space-y-2">
-              {(CATEGORY_TREE.find((c2) => c2.slug === catImgCategory)?.subs || []).map((s2) => (
+              {(catTree.find((c2) => c2.slug === catImgCategory)?.subs || []).map((s2) => (
                 <div key={s2.slug} className="flex items-center gap-2">
                   <span className="w-10 h-10 rounded-full overflow-hidden border border-souq-goldlight/60 bg-souq-sand flex items-center justify-center shrink-0">
                     {catImages[s2.slug] ? (
