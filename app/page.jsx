@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "../lib/db";
+import { redirect } from "next/navigation";
 import HomeClient from "../components/HomeClient";
 import { getCategoryTree } from "../lib/categories";
 
@@ -12,14 +13,17 @@ export default async function Home({ searchParams }) {
   const sub = searchParams?.sub || "";
   const q = (searchParams?.q || "").trim();
 
+  // Choosing a category now always leads to its dedicated screen.
+  if (cat && cat !== "all") {
+    redirect(`/category/${cat}${sub ? `?sub=${sub}` : ""}`);
+  }
+
   let items = [];
   let total = 0;
   let tree = [];
   try {
     tree = await getCategoryTree();
     const where = {};
-    if (cat && cat !== "all") where.category = cat;
-    if (sub) where.subcategory = sub;
     if (q) {
       where.OR = [
         { nameAr: { contains: q, mode: "insensitive" } },
@@ -68,8 +72,6 @@ export default async function Home({ searchParams }) {
         tree={tree}
         initialItems={items}
         initialTotal={total}
-        initialCat={cat || "all"}
-        initialSub={sub}
         initialQuery={q}
       />
     </>

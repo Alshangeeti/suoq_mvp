@@ -1,24 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useStore } from "../lib/store";
 import ProductListing from "./ProductListing";
 
-export default function HomeClient({ tree = [], initialItems = null, initialTotal = 0, initialCat = "all", initialSub = "", initialQuery = "" }) {
+export default function HomeClient({ tree = [], initialItems = null, initialTotal = 0, initialQuery = "" }) {
   const { t, lang } = useStore();
-  const [cat, setCat] = useState(tree.some((x) => x.slug === initialCat) ? initialCat : "all");
-  const [sub, setSub] = useState(initialSub || "");
   const [query, setQuery] = useState(initialQuery);
   const [debouncedQ, setDebouncedQ] = useState(initialQuery);
   const catName = (item) => (lang === "ar" ? item.ar : item.fr);
-  const activeTree = tree.find((x) => x.slug === cat);
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQ(query.trim()), 400);
     return () => clearTimeout(id);
   }, [query]);
 
-  const catUnchanged = cat === (tree.some((x) => x.slug === initialCat) ? initialCat : "all");
-  const useInitial = catUnchanged && sub === (initialSub || "") && debouncedQ === initialQuery;
+  const useInitial = debouncedQ === initialQuery;
 
   return (
     <div>
@@ -50,52 +47,18 @@ export default function HomeClient({ tree = [], initialItems = null, initialTota
       </div>
 
       <div className="flex items-center gap-2 overflow-x-auto py-4">
-        <button
-          onClick={() => { setCat("all"); setSub(""); }}
-          className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold border transition ${
-            cat === "all"
-              ? "bg-souq-green text-white border-souq-green"
-              : "bg-white text-souq-ink border-souq-goldlight hover:border-souq-gold"
-          }`}
-        >
-          {t("all")}
-        </button>
         {tree.map((c2) => (
-          <button
+          <Link
             key={c2.slug}
-            onClick={() => { setCat(c2.slug); setSub(""); }}
-            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold border transition ${
-              cat === c2.slug
-                ? "bg-souq-green text-white border-souq-green"
-                : "bg-white text-souq-ink border-souq-goldlight hover:border-souq-gold"
-            }`}
+            href={`/category/${c2.slug}`}
+            className="whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold border transition bg-white text-souq-ink border-souq-goldlight hover:border-souq-gold hover:text-souq-green"
           >
             {catName(c2)}
-          </button>
+          </Link>
         ))}
       </div>
 
-      {activeTree && activeTree.subs.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-3 -mt-1">
-          {activeTree.subs.map((s2) => (
-            <button
-              key={s2.slug}
-              onClick={() => setSub(sub === s2.slug ? "" : s2.slug)}
-              className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold border transition ${
-                sub === s2.slug
-                  ? "bg-souq-gold text-souq-deep border-souq-gold"
-                  : "bg-white text-souq-ink/70 border-souq-goldlight/60"
-              }`}
-            >
-              {catName(s2)}
-            </button>
-          ))}
-        </div>
-      )}
-
       <ProductListing
-        cat={cat === "all" ? "" : cat}
-        sub={sub}
         q={debouncedQ}
         initialItems={useInitial ? initialItems : null}
         initialTotal={initialTotal}
