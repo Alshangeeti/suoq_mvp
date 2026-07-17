@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const EMPTY_PRODUCT = {
   id: null, nameAr: "", nameFr: "", descAr: "", descFr: "",
@@ -39,11 +39,31 @@ export default function AdminPage() {
     const res = await fetch("/api/orders", { headers: { "x-admin-key": k } });
     if (!res.ok) {
       setError("Wrong admin key");
+      try { sessionStorage.removeItem("souq_admin_key"); } catch {}
       return;
     }
+    try { sessionStorage.setItem("souq_admin_key", k); } catch {}
     setOrders(await res.json());
     const pr = await fetch("/api/products");
     if (pr.ok) setProducts(await pr.json());
+  };
+
+  // Restore the admin session on refresh (kept for this browser tab only).
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("souq_admin_key");
+      if (saved) {
+        setKey(saved);
+        load(saved);
+      }
+    } catch {}
+  }, []);
+
+  const logoutAdmin = () => {
+    try { sessionStorage.removeItem("souq_admin_key"); } catch {}
+    setKey("");
+    setOrders(null);
+    setProducts([]);
   };
 
   const patchOrder = async (ref, body) => {
@@ -127,13 +147,14 @@ export default function AdminPage() {
   if (orders === null)
     return (
       <div className="py-16 max-w-sm mx-auto text-center" dir="ltr">
-        <h1 className="font-black text-xl mb-4">Admin</h1>
+        <h1 className="font-black text-xl mb-4">Admin sign in</h1>
         <input
           type="password"
           value={key}
           onChange={(e) => setKey(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && load()}
           placeholder="Admin key"
-          className="w-full rounded-xl border border-souq-goldlight px-4 py-2.5"
+          className="w-full rounded-xl border border-souq-goldlight px-4 py-2.5 text-souq-ink"
         />
         {error && <p className="text-red-600 text-sm mt-2 font-bold">{error}</p>}
         <button onClick={() => load()} className="mt-3 w-full bg-souq-green text-white font-bold rounded-full py-2.5">
@@ -278,8 +299,11 @@ export default function AdminPage() {
   return (
     <div className="py-8" dir="ltr">
       <div className="flex items-center justify-between mb-5">
-        <h1 className="font-black text-xl">Admin</h1>
-        <button onClick={() => load()} className="text-sm font-bold text-souq-green">↻ Refresh</button>
+        <h1 className="font-black text-xl">Dashboard</h1>
+        <div className="flex items-center gap-4">
+          <button onClick={() => load()} className="text-sm font-bold text-souq-gold">↻ Refresh</button>
+          <button onClick={logoutAdmin} className="text-sm font-bold text-red-400">Log out</button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-6">

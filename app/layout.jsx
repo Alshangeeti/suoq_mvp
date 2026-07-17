@@ -1,7 +1,6 @@
 import "./globals.css";
 import { StoreProvider } from "../lib/store";
-import Header from "../components/Header";
-import BottomNav from "../components/BottomNav";
+import SiteChrome from "../components/SiteChrome";
 
 export const metadata = {
   metadataBase: new URL("https://www.souqmauritania.com"),
@@ -41,12 +40,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className="bg-souq-sand text-souq-ink min-h-screen">
         <StoreProvider>
-          <Header />
-          <main className="max-w-5xl mx-auto px-4 pb-24 md:pb-20">{children}</main>
-          <footer className="bg-souq-deep text-souq-goldlight text-center py-6 text-sm">
-            Souq Mauritania © {new Date().getFullYear()} — Guangzhou ⇄ Nouakchott
-          </footer>
-          <BottomNav />
+          <SiteChrome>{children}</SiteChrome>
         </StoreProvider>
       </body>
     </html>
