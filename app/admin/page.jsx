@@ -174,7 +174,7 @@ export default function AdminPage() {
     let items = [];
     try { items = JSON.parse(o.itemsJson || "[]"); } catch {}
     return (
-      <div key={o.ref} className={`bg-white rounded-2xl border p-4 ${verification ? "border-souq-gold" : "border-souq-goldlight/60"}`}>
+      <div key={o.ref} className={`bg-white text-souq-ink rounded-2xl border p-4 ${verification ? "border-souq-gold" : "border-souq-goldlight/60"}`}>
         <div className="flex flex-wrap items-center gap-3">
           <span className="font-mono font-bold">{o.ref}</span>
           <span className="flex-1 text-sm">{o.customerName} · {o.phone} · {o.city}</span>
@@ -202,7 +202,7 @@ export default function AdminPage() {
               <select
                 value={o.fulfillmentStatus || "RECEIVED"}
                 onChange={(e) => patchOrder(o.ref, { fulfillmentStatus: e.target.value })}
-                className="text-xs font-bold border border-souq-goldlight rounded-full px-2 py-1 bg-white"
+                className="text-xs font-bold border-2 border-souq-green rounded-full px-2 py-1 bg-white text-souq-green"
                 aria-label="fulfillment status"
               >
                 <option value="RECEIVED">Received</option>
@@ -307,15 +307,15 @@ export default function AdminPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-white rounded-2xl border border-souq-goldlight/60 p-4 text-center">
+        <div className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-4 text-center">
           <p className="text-2xl font-black text-souq-green">{todayOrders.length}</p>
           <p className="text-xs font-bold text-souq-ink/60">Orders today</p>
         </div>
-        <div className="bg-white rounded-2xl border border-souq-goldlight/60 p-4 text-center">
+        <div className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-4 text-center">
           <p className="text-2xl font-black text-souq-green">{todayRevenue.toLocaleString()}</p>
           <p className="text-xs font-bold text-souq-ink/60">Revenue today (MRU)</p>
         </div>
-        <div className={`rounded-2xl border p-4 text-center ${pendingVerifications.length ? "bg-souq-gold/20 border-souq-gold" : "bg-white border-souq-goldlight/60"}`}>
+        <div className={`rounded-2xl border p-4 text-center ${pendingVerifications.length ? "bg-souq-gold/20 border-souq-gold text-white" : "bg-white text-souq-ink border-souq-goldlight/60"}`}>
           <p className="text-2xl font-black text-souq-deep">{pendingVerifications.length}</p>
           <p className="text-xs font-bold text-souq-ink/60">Pending verification</p>
         </div>
@@ -328,7 +328,7 @@ export default function AdminPage() {
         </section>
       )}
 
-      <div className="flex gap-1 mb-5 bg-white rounded-full border border-souq-goldlight/60 p-1 w-fit">
+      <div className="flex gap-1 mb-5 bg-white text-souq-ink rounded-full border border-souq-goldlight/60 p-1 w-fit">
         {["orders", "products"].map((k) => (
           <button
             key={k}
@@ -349,7 +349,7 @@ export default function AdminPage() {
 
       {tab === "products" && (
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl border-2 border-souq-gold/60 p-4">
+          <div className="bg-white text-souq-ink rounded-2xl border-2 border-souq-gold/60 p-4">
             <h2 className="font-black mb-1">🔗 Import from AliExpress</h2>
             <p className="text-xs text-souq-ink/60 mb-3">
               Paste a product link — title, photos and cost auto-fill below. Set your MRU price and Arabic name, then add.
@@ -390,7 +390,7 @@ export default function AdminPage() {
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-souq-goldlight/60 p-4">
+          <div className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-4">
             <h2 className="font-black mb-3">{form.id ? `Edit product #${form.id}` : "Add product"}</h2>
             <div className="grid md:grid-cols-2 gap-3">
               <input value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} placeholder="Name (Arabic)" dir="rtl" className="rounded-xl border border-souq-goldlight px-3 py-2" />
@@ -426,7 +426,7 @@ export default function AdminPage() {
 
           <div className="space-y-2">
             {products.map((p) => (
-              <div key={p.id} className="bg-white rounded-2xl border border-souq-goldlight/60 p-3 flex items-center gap-3">
+              <div key={p.id} className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-3 flex items-center gap-3">
                 {p.imageUrl ? (
                   <img src={p.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
                 ) : (
