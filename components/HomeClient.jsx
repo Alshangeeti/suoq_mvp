@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useStore } from "../lib/store";
 import ProductCard from "./ProductCard";
-import CategoryMenu from "./CategoryMenu";
 import { CATEGORY_TREE, MAIN_SLUGS } from "../lib/categories";
 
 export default function HomeClient({ products = [], loadError = false, initialCat = "all", initialSub = "", initialQuery = "" }) {
@@ -54,7 +53,6 @@ export default function HomeClient({ products = [], loadError = false, initialCa
       </div>
 
       <div className="flex items-center gap-2 overflow-x-auto py-4">
-        <div className="shrink-0"><CategoryMenu /></div>
         <button
           onClick={() => { setCat("all"); setSub(""); }}
           className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold border transition ${
@@ -75,7 +73,7 @@ export default function HomeClient({ products = [], loadError = false, initialCa
                 : "bg-white text-souq-ink border-souq-goldlight hover:border-souq-gold"
             }`}
           >
-            {c2.emoji} {catName(c2)}
+            {catName(c2)}
           </button>
         ))}
       </div>

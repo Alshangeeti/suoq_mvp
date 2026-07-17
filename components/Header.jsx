@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "../lib/store";
 import AccountIcon from "./AccountIcon";
+import HeaderCategoryMenu from "./HeaderCategoryMenu";
 
 export default function Header() {
   const { t, lang, setLang, count, customer } = useStore();
@@ -16,12 +17,15 @@ export default function Header() {
   return (
     <header className="bg-souq-green text-white sticky top-0 z-20 shadow-md">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="w-9 h-9 rounded-full bg-souq-gold text-souq-deep flex items-center justify-center text-xl font-black">
-            س
-          </span>
-          <span className="font-black text-lg">{t("brand")}</span>
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="w-9 h-9 rounded-full bg-souq-gold text-souq-deep flex items-center justify-center text-xl font-black">
+              س
+            </span>
+            <span className="font-black text-lg">{t("brand")}</span>
+          </Link>
+          <HeaderCategoryMenu />
+        </div>
         <form onSubmit={submitSearch} className="hidden md:block flex-1 max-w-md">
           <input
             type="search"

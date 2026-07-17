@@ -34,6 +34,9 @@ export default function AdminPage() {
   const [aePreview, setAePreview] = useState(null);
   const [aeError, setAeError] = useState("");
   const [aeBusy, setAeBusy] = useState(false);
+  const [catImages, setCatImages] = useState({});
+  const [catImgCategory, setCatImgCategory] = useState(CATEGORY_TREE[0].slug);
+  const [catImgSaved, setCatImgSaved] = useState("");
 
   const load = async (k = key) => {
     setError("");
@@ -47,6 +50,24 @@ export default function AdminPage() {
     setOrders(await res.json());
     const pr = await fetch("/api/products");
     if (pr.ok) setProducts(await pr.json());
+    const ci = await fetch("/api/admin/category-images", { headers: { "x-admin-key": k } });
+    if (ci.ok) {
+      const data = await ci.json();
+      setCatImages(data.images || {});
+    }
+  };
+
+  const saveCatImage = async (slug) => {
+    setCatImgSaved("");
+    const res = await fetch("/api/admin/category-images", {
+      method: "POST",
+      headers: { "x-admin-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, imageUrl: catImages[slug] || "" })
+    });
+    if (res.ok) {
+      setCatImgSaved(slug);
+      setTimeout(() => setCatImgSaved(""), 2000);
+    }
   };
 
   // Restore the admin session on refresh (kept for this browser tab only).
@@ -407,7 +428,7 @@ export default function AdminPage() {
                   aria-label="category"
                 >
                   {CATEGORY_TREE.map((c2) => (
-                    <option key={c2.slug} value={c2.slug}>{c2.emoji} {c2.fr} / {c2.ar}</option>
+                    <option key={c2.slug} value={c2.slug}>{c2.fr} / {c2.ar}</option>
                   ))}
                 </select>
                 <select
@@ -437,6 +458,50 @@ export default function AdminPage() {
                   Cancel
                 </button>
               )}
+            </div>
+          </div>
+
+          <div className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-4">
+            <h2 className="font-black mb-1">Subcategory photos</h2>
+            <p className="text-xs text-souq-ink/60 mb-3">
+              These photos appear as circles on each category page. Paste an image URL (e.g. a product photo link) and Save.
+            </p>
+            <select
+              value={catImgCategory}
+              onChange={(e) => setCatImgCategory(e.target.value)}
+              className="rounded-xl border border-souq-goldlight px-3 py-2 bg-white mb-3"
+              aria-label="category for photos"
+            >
+              {CATEGORY_TREE.map((c2) => (
+                <option key={c2.slug} value={c2.slug}>{c2.fr} / {c2.ar}</option>
+              ))}
+            </select>
+            <div className="space-y-2">
+              {(CATEGORY_TREE.find((c2) => c2.slug === catImgCategory)?.subs || []).map((s2) => (
+                <div key={s2.slug} className="flex items-center gap-2">
+                  <span className="w-10 h-10 rounded-full overflow-hidden border border-souq-goldlight/60 bg-souq-sand flex items-center justify-center shrink-0">
+                    {catImages[s2.slug] ? (
+                      <img src={catImages[s2.slug]} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs font-black text-souq-green">{s2.fr.slice(0, 1)}</span>
+                    )}
+                  </span>
+                  <span className="w-40 text-sm font-bold shrink-0">{s2.fr} / {s2.ar}</span>
+                  <input
+                    value={catImages[s2.slug] || ""}
+                    onChange={(e) => setCatImages({ ...catImages, [s2.slug]: e.target.value })}
+                    placeholder="https://...jpg"
+                    dir="ltr"
+                    className="flex-1 rounded-xl border border-souq-goldlight px-3 py-1.5 text-sm"
+                  />
+                  <button
+                    onClick={() => saveCatImage(s2.slug)}
+                    className="text-xs font-bold bg-souq-green text-white rounded-full px-4 py-1.5"
+                  >
+                    {catImgSaved === s2.slug ? "✓" : "Save"}
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 
