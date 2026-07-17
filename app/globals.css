@@ -3,3 +3,20 @@
 @tailwind utilities;
 
 body { font-family: 'Cairo', sans-serif; }
+
+/* Admin shell: white cards and form fields must use dark ink text,
+   not the white text inherited from the dark shell background. */
+.admin-shell .bg-white,
+.admin-shell .bg-souq-sand {
+  color: #1B231E;
+}
+.admin-shell input,
+.admin-shell select,
+.admin-shell textarea {
+  color: #1B231E;
+  background-color: #ffffff;
+}
+.admin-shell input::placeholder,
+.admin-shell textarea::placeholder {
+  color: #8a8f87;
+}

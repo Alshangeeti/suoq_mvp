@@ -12,7 +12,7 @@ export default function SiteChrome({ children }) {
 
   if (isAdmin) {
     return (
-      <div className="min-h-screen bg-[#10141f] text-white" dir="ltr">
+      <div className="admin-shell min-h-screen bg-[#10141f] text-white" dir="ltr">
         <header className="bg-[#0a0d15] border-b border-white/10 sticky top-0 z-20">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-2">
             <span className="w-8 h-8 rounded-lg bg-souq-gold text-souq-deep flex items-center justify-center font-black">
