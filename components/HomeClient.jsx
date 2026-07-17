@@ -2,15 +2,19 @@
 import { useState } from "react";
 import { useStore } from "../lib/store";
 import ProductCard from "./ProductCard";
+import CategoryMenu from "./CategoryMenu";
+import { CATEGORY_TREE, MAIN_SLUGS } from "../lib/categories";
 
-const CATS = ["all", "electronics", "home", "fashion", "beauty"];
-
-export default function HomeClient({ products = [], loadError = false, initialCat = "all", initialQuery = "" }) {
-  const { t } = useStore();
-  const [cat, setCat] = useState(CATS.includes(initialCat) ? initialCat : "all");
+export default function HomeClient({ products = [], loadError = false, initialCat = "all", initialSub = "", initialQuery = "" }) {
+  const { t, lang } = useStore();
+  const [cat, setCat] = useState(MAIN_SLUGS.includes(initialCat) ? initialCat : "all");
+  const [sub, setSub] = useState(initialSub || "");
   const [query, setQuery] = useState(initialQuery);
+  const catName = (item) => (lang === "ar" ? item.ar : item.fr);
+  const activeTree = CATEGORY_TREE.find((x) => x.slug === cat);
 
-  const byCat = cat === "all" ? products : products.filter((p) => p.category === cat);
+  let byCat = cat === "all" ? products : products.filter((p) => p.category === cat);
+  if (cat !== "all" && sub) byCat = byCat.filter((p) => p.subcategory === sub);
   const q = query.trim().toLowerCase();
   const shown = !q
     ? byCat
@@ -49,21 +53,50 @@ export default function HomeClient({ products = [], loadError = false, initialCa
         />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto py-4">
-        {CATS.map((c) => (
+      <div className="flex items-center gap-2 overflow-x-auto py-4">
+        <div className="shrink-0"><CategoryMenu /></div>
+        <button
+          onClick={() => { setCat("all"); setSub(""); }}
+          className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold border transition ${
+            cat === "all"
+              ? "bg-souq-green text-white border-souq-green"
+              : "bg-white text-souq-ink border-souq-goldlight hover:border-souq-gold"
+          }`}
+        >
+          {t("all")}
+        </button>
+        {CATEGORY_TREE.map((c2) => (
           <button
-            key={c}
-            onClick={() => setCat(c)}
+            key={c2.slug}
+            onClick={() => { setCat(c2.slug); setSub(""); }}
             className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold border transition ${
-              cat === c
+              cat === c2.slug
                 ? "bg-souq-green text-white border-souq-green"
                 : "bg-white text-souq-ink border-souq-goldlight hover:border-souq-gold"
             }`}
           >
-            {t(c)}
+            {c2.emoji} {catName(c2)}
           </button>
         ))}
       </div>
+
+      {activeTree && (
+        <div className="flex gap-2 overflow-x-auto pb-3 -mt-1">
+          {activeTree.subs.map((s2) => (
+            <button
+              key={s2.slug}
+              onClick={() => setSub(sub === s2.slug ? "" : s2.slug)}
+              className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold border transition ${
+                sub === s2.slug
+                  ? "bg-souq-gold text-souq-deep border-souq-gold"
+                  : "bg-white text-souq-ink/70 border-souq-goldlight/60"
+              }`}
+            >
+              {catName(s2)}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {shown.map((p) => (

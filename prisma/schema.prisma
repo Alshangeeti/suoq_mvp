@@ -15,6 +15,7 @@ model Product {
   descFr       String
   priceMru     Int
   category     String
+  subcategory  String?
   emoji        String
   stocked      Boolean @default(false)
   imageUrl     String?

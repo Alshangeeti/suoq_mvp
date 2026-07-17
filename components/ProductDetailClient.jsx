@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useStore } from "../lib/store";
 import ProductCard from "./ProductCard";
 import RecentlyViewed from "./RecentlyViewed";
+import { findCategory } from "../lib/categories";
 
 function ProductGallery({ product, name }) {
   let images = [];
@@ -94,7 +95,10 @@ export default function ProductDetailClient({ product, related }) {
         <Link href="/" className="hover:text-souq-green font-bold">{t("homeCrumb")}</Link>
         <span className="mx-2">›</span>
         <Link href={`/?cat=${product.category}`} className="hover:text-souq-green font-bold">
-          {t(product.category)}
+          {(() => {
+            const c2 = findCategory(product.category);
+            return c2 ? (lang === "ar" ? c2.ar : c2.fr) : t(product.category);
+          })()}
         </Link>
         <span className="mx-2">›</span>
         <span className="text-souq-ink font-bold">{name}</span>

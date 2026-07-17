@@ -46,6 +46,7 @@ export default async function Home({ searchParams }) {
         products={products}
         loadError={loadError}
         initialCat={searchParams?.cat || "all"}
+        initialSub={searchParams?.sub || ""}
         initialQuery={searchParams?.q || ""}
       />
     </>

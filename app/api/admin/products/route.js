@@ -2,8 +2,9 @@ export const dynamic = "force-dynamic";
 import { prisma } from "../../../../lib/db";
 import { NextResponse } from "next/server";
 import { isAdmin } from "../../../../lib/adminAuth";
+import { MAIN_SLUGS, isValidSub } from "../../../../lib/categories";
 
-const CATEGORIES = ["electronics", "home", "fashion", "beauty"];
+const CATEGORIES = MAIN_SLUGS;
 
 function cleanProduct(body) {
   const nameAr = String(body.nameAr || "").trim().slice(0, 200);
@@ -12,6 +13,8 @@ function cleanProduct(body) {
   const descFr = String(body.descFr || "").trim().slice(0, 500);
   const priceMru = parseInt(body.priceMru, 10);
   const category = CATEGORIES.includes(body.category) ? body.category : "home";
+  const subcategory =
+    body.subcategory && isValidSub(category, body.subcategory) ? body.subcategory : null;
   const emoji = String(body.emoji || "📦").slice(0, 8);
   const stocked = !!body.stocked;
   const imageUrl = String(body.imageUrl || "").trim().slice(0, 500) || null;
@@ -28,7 +31,7 @@ function cleanProduct(body) {
     : null;
   if (!nameAr || !nameFr || Number.isNaN(priceMru) || priceMru <= 0) return null;
   return {
-    nameAr, nameFr, descAr, descFr, priceMru, category, emoji, stocked,
+    nameAr, nameFr, descAr, descFr, priceMru, category, subcategory, emoji, stocked,
     imageUrl, imagesJson, aliexpressId, skuAttr,
     costUsd: costUsd !== null && !Number.isNaN(costUsd) ? costUsd : null
   };

@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
+import { CATEGORY_TREE } from "../../lib/categories";
 
 const EMPTY_PRODUCT = {
   id: null, nameAr: "", nameFr: "", descAr: "", descFr: "",
-  priceMru: "", category: "home", emoji: "📦", stocked: false
+  priceMru: "", category: "home", subcategory: "", emoji: "📦", stocked: false
 };
 const STATUS_BADGE = {
   PAID: "bg-souq-green text-white",
@@ -399,11 +400,26 @@ export default function AdminPage() {
               <input value={form.descFr} onChange={(e) => setForm({ ...form, descFr: e.target.value })} placeholder="Description (French)" className="rounded-xl border border-souq-goldlight px-3 py-2" />
               <input value={form.priceMru} onChange={(e) => setForm({ ...form, priceMru: e.target.value })} placeholder="Price (MRU)" type="number" className="rounded-xl border border-souq-goldlight px-3 py-2" />
               <div className="flex gap-2">
-                <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="flex-1 rounded-xl border border-souq-goldlight px-3 py-2 bg-white" aria-label="category">
-                  <option value="electronics">Electronics</option>
-                  <option value="home">Home</option>
-                  <option value="fashion">Fashion</option>
-                  <option value="beauty">Beauty</option>
+                <select
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value, subcategory: "" })}
+                  className="flex-1 rounded-xl border border-souq-goldlight px-3 py-2 bg-white"
+                  aria-label="category"
+                >
+                  {CATEGORY_TREE.map((c2) => (
+                    <option key={c2.slug} value={c2.slug}>{c2.emoji} {c2.fr} / {c2.ar}</option>
+                  ))}
+                </select>
+                <select
+                  value={form.subcategory || ""}
+                  onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
+                  className="flex-1 rounded-xl border border-souq-goldlight px-3 py-2 bg-white"
+                  aria-label="subcategory"
+                >
+                  <option value="">— subcategory —</option>
+                  {(CATEGORY_TREE.find((c2) => c2.slug === form.category)?.subs || []).map((s2) => (
+                    <option key={s2.slug} value={s2.slug}>{s2.fr} / {s2.ar}</option>
+                  ))}
                 </select>
                 <input value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })} placeholder="Emoji" className="w-20 rounded-xl border border-souq-goldlight px-3 py-2 text-center" />
               </div>
