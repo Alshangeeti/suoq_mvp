@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 const EMPTY_PRODUCT = {
   id: null, nameAr: "", nameFr: "", descAr: "", descFr: "",
-  priceMru: "", category: "home", subcategory: "", emoji: "📦", stocked: false
+  priceMru: "", originalPriceMru: "", category: "home", subcategory: "", emoji: "📦", stocked: false
 };
 const STATUS_BADGE = {
   PAID: "bg-souq-green text-white",
@@ -40,6 +40,10 @@ export default function AdminPage() {
   const [newCat, setNewCat] = useState({ ar: "", fr: "" });
   const [newSub, setNewSub] = useState({ categorySlug: "", ar: "", fr: "" });
   const [catError, setCatError] = useState("");
+  const [prodSearch, setProdSearch] = useState("");
+  const [prodCatFilter, setProdCatFilter] = useState("");
+  const [prodPage, setProdPage] = useState(1);
+  const [inlinePrices, setInlinePrices] = useState({});
 
   const load = async (k = key) => {
     setError("");
@@ -228,6 +232,24 @@ export default function AdminPage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const saveInlinePrice = async (p) => {
+    const newPrice = inlinePrices[p.id];
+    if (!newPrice || parseInt(newPrice, 10) === p.priceMru) return;
+    let images = [];
+    try { images = JSON.parse(p.imagesJson || "[]"); } catch {}
+    await fetch("/api/admin/products", {
+      method: "PUT",
+      headers: { "x-admin-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ ...p, priceMru: newPrice, images })
+    });
+    setInlinePrices((prev) => {
+      const n = { ...prev };
+      delete n[p.id];
+      return n;
+    });
+    load();
   };
 
   const deleteProduct = async (id) => {
@@ -494,6 +516,7 @@ export default function AdminPage() {
               <input value={form.descAr} onChange={(e) => setForm({ ...form, descAr: e.target.value })} placeholder="Description (Arabic)" dir="rtl" className="rounded-xl border border-souq-goldlight px-3 py-2" />
               <input value={form.descFr} onChange={(e) => setForm({ ...form, descFr: e.target.value })} placeholder="Description (French)" className="rounded-xl border border-souq-goldlight px-3 py-2" />
               <input value={form.priceMru} onChange={(e) => setForm({ ...form, priceMru: e.target.value })} placeholder="Price (MRU)" type="number" className="rounded-xl border border-souq-goldlight px-3 py-2" />
+              <input value={form.originalPriceMru || ""} onChange={(e) => setForm({ ...form, originalPriceMru: e.target.value })} placeholder="Original price before discount (optional)" type="number" className="rounded-xl border border-souq-goldlight px-3 py-2" />
               <div className="flex gap-2">
                 <select
                   value={form.category}
@@ -645,28 +668,85 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            {products.map((p) => (
-              <div key={p.id} className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-3 flex items-center gap-3">
-                {p.imageUrl ? (
-                  <img src={p.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                ) : (
-                  <span className="text-3xl">{p.emoji}</span>
-                )}
-                <div className="flex-1">
-                  <p className="font-bold text-sm">{p.nameFr} · {p.nameAr}</p>
-                  <p className="text-xs text-souq-ink/50">{p.category} · {p.stocked ? "stocked" : "on-demand"}</p>
+          {(() => {
+            const PER_PAGE = 20;
+            const qq = prodSearch.trim().toLowerCase();
+            const filtered = products.filter((p) => {
+              if (prodCatFilter && p.category !== prodCatFilter) return false;
+              if (!qq) return true;
+              return [p.nameAr, p.nameFr, p.aliexpressId].filter(Boolean).some((s) => String(s).toLowerCase().includes(qq));
+            });
+            const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+            const cur = Math.min(prodPage, pages);
+            const shown = filtered.slice((cur - 1) * PER_PAGE, cur * PER_PAGE);
+            return (
+              <div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <input
+                    value={prodSearch}
+                    onChange={(e) => { setProdSearch(e.target.value); setProdPage(1); }}
+                    placeholder="Search products..."
+                    className="flex-1 min-w-[180px] rounded-xl border border-souq-goldlight px-3 py-2 text-sm"
+                  />
+                  <select
+                    value={prodCatFilter}
+                    onChange={(e) => { setProdCatFilter(e.target.value); setProdPage(1); }}
+                    className="rounded-xl border border-souq-goldlight px-3 py-2 bg-white text-sm font-bold"
+                    aria-label="filter category"
+                  >
+                    <option value="">All categories</option>
+                    {catTree.map((c2) => (
+                      <option key={c2.slug} value={c2.slug}>{c2.fr}</option>
+                    ))}
+                  </select>
+                  <span className="text-sm font-bold text-white/70 self-center">{filtered.length} products</span>
                 </div>
-                <span className="font-black text-souq-green">{p.priceMru.toLocaleString()} MRU</span>
-                <button onClick={() => setForm({ ...p, priceMru: String(p.priceMru) })} className="text-xs font-bold border border-souq-green text-souq-green rounded-full px-3 py-1">
-                  Edit
-                </button>
-                <button onClick={() => deleteProduct(p.id)} className="text-xs font-bold border border-red-500 text-red-600 rounded-full px-3 py-1">
-                  Delete
-                </button>
+                <div className="space-y-2">
+                  {shown.map((p) => (
+                    <div key={p.id} className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-3 flex items-center gap-3 flex-wrap">
+                      {p.imageUrl ? (
+                        <img src={p.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                      ) : (
+                        <span className="text-3xl">{p.emoji}</span>
+                      )}
+                      <div className="flex-1 min-w-[160px]">
+                        <p className="font-bold text-sm">{p.nameFr} · {p.nameAr}</p>
+                        <p className="text-xs text-souq-ink/50">{p.category}{p.subcategory ? ` / ${p.subcategory}` : ""} · {p.stocked ? "stocked" : "on-demand"}</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          value={inlinePrices[p.id] !== undefined ? inlinePrices[p.id] : p.priceMru}
+                          onChange={(e) => setInlinePrices({ ...inlinePrices, [p.id]: e.target.value })}
+                          className="w-24 rounded-lg border border-souq-goldlight px-2 py-1 text-sm font-bold text-souq-green"
+                          aria-label="price"
+                        />
+                        <span className="text-xs font-bold text-souq-ink/50">MRU</span>
+                        {inlinePrices[p.id] !== undefined && String(inlinePrices[p.id]) !== String(p.priceMru) && (
+                          <button onClick={() => saveInlinePrice(p)} className="text-xs font-bold bg-souq-green text-white rounded-full px-3 py-1">
+                            ✓
+                          </button>
+                        )}
+                      </div>
+                      <button onClick={() => setForm({ ...p, priceMru: String(p.priceMru), originalPriceMru: p.originalPriceMru ? String(p.originalPriceMru) : "" })} className="text-xs font-bold border border-souq-green text-souq-green rounded-full px-3 py-1">
+                        Edit
+                      </button>
+                      <button onClick={() => deleteProduct(p.id)} className="text-xs font-bold border border-red-500 text-red-600 rounded-full px-3 py-1">
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {pages > 1 && (
+                  <div className="flex items-center justify-center gap-3 mt-4">
+                    <button disabled={cur <= 1} onClick={() => setProdPage(cur - 1)} className="text-sm font-bold bg-white text-souq-ink rounded-full px-4 py-1.5 disabled:opacity-40">←</button>
+                    <span className="text-sm font-bold text-white/80">{cur} / {pages}</span>
+                    <button disabled={cur >= pages} onClick={() => setProdPage(cur + 1)} className="text-sm font-bold bg-white text-souq-ink rounded-full px-4 py-1.5 disabled:opacity-40">→</button>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </div>
       )}
     </div>

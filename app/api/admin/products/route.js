@@ -11,6 +11,7 @@ async function cleanProduct(body) {
   const descAr = String(body.descAr || "").trim().slice(0, 500);
   const descFr = String(body.descFr || "").trim().slice(0, 500);
   const priceMru = parseInt(body.priceMru, 10);
+  const originalPriceMru = body.originalPriceMru ? parseInt(body.originalPriceMru, 10) : null;
   const category = CATEGORIES.includes(body.category) ? body.category : (CATEGORIES[0] || "home");
   let subcategory = null;
   if (body.subcategory) {
@@ -36,7 +37,9 @@ async function cleanProduct(body) {
     : null;
   if (!nameAr || !nameFr || Number.isNaN(priceMru) || priceMru <= 0) return null;
   return {
-    nameAr, nameFr, descAr, descFr, priceMru, category, subcategory, emoji, stocked,
+    nameAr, nameFr, descAr, descFr, priceMru,
+    originalPriceMru: originalPriceMru && !Number.isNaN(originalPriceMru) && originalPriceMru > priceMru ? originalPriceMru : null,
+    category, subcategory, emoji, stocked,
     imageUrl, imagesJson, aliexpressId, skuAttr,
     costUsd: costUsd !== null && !Number.isNaN(costUsd) ? costUsd : null
   };
