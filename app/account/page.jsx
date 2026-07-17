@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useStore } from "../../lib/store";
 import PhoneInput from "../../components/PhoneInput";
+import MapPicker from "../../components/MapPicker";
 
 const STATUS_LABELS = {
   RECEIVED: { ar: "تم الاستلام", fr: "Reçue" },
@@ -19,6 +20,7 @@ export default function AccountPage() {
   const [orders, setOrders] = useState([]);
   const [addresses, setAddresses] = useState([]);
   const [newAddr, setNewAddr] = useState({ city: "Nouakchott", address: "" });
+  const [showAddrMap, setShowAddrMap] = useState(false);
   const [tab, setTab] = useState("profile");
 
   // Login flow state
@@ -432,6 +434,31 @@ export default function AccountPage() {
               >
                 إضافة
               </button>
+            </div>
+            <div className="mt-3">
+              {!showAddrMap ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAddrMap(true)}
+                  className="text-sm font-bold border border-souq-green text-souq-green rounded-full px-4 py-2"
+                >
+                  {t("pickOnMap")}
+                </button>
+              ) : (
+                <MapPicker
+                  labels={{
+                    useMyLocation: t("useMyLocation"),
+                    confirm: t("confirmLocation"),
+                    cancel: t("cancel"),
+                    locationDenied: t("locationDenied")
+                  }}
+                  onPick={(p) => {
+                    setNewAddr({ city: p.city, address: p.address });
+                    setShowAddrMap(false);
+                  }}
+                  onClose={() => setShowAddrMap(false)}
+                />
+              )}
             </div>
           </div>
         </div>

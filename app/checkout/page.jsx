@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useStore } from "../../lib/store";
 import PhoneInput from "../../components/PhoneInput";
 import { PAYMENT_METHODS } from "../../lib/payments";
+import MapPicker from "../../components/MapPicker";
 
 export default function CheckoutPage() {
   const { t, cart, total, clearCart, customer } = useStore();
@@ -14,6 +15,7 @@ export default function CheckoutPage() {
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("BANKILY");
+  const [showMap, setShowMap] = useState(false);
 
   useEffect(() => {
     if (!customer) return;
@@ -166,6 +168,31 @@ export default function CheckoutPage() {
             className="mt-1 w-full rounded-xl border border-souq-goldlight bg-white px-4 py-2.5 focus:outline-none focus:border-souq-green"
           />
         </label>
+
+        {!showMap ? (
+          <button
+            type="button"
+            onClick={() => setShowMap(true)}
+            className="text-sm font-bold border border-souq-green text-souq-green rounded-full px-4 py-2"
+          >
+            {t("pickOnMap")}
+          </button>
+        ) : (
+          <MapPicker
+            labels={{
+              useMyLocation: t("useMyLocation"),
+              confirm: t("confirmLocation"),
+              cancel: t("cancel"),
+              locationDenied: t("locationDenied")
+            }}
+            onPick={(p) => {
+              setSelectedAddressId(null);
+              setForm({ ...form, city: p.city, address: p.address });
+              setShowMap(false);
+            }}
+            onClose={() => setShowMap(false)}
+          />
+        )}
       </div>
 
       <div className="mt-5 bg-white rounded-2xl border border-souq-goldlight/60 p-5">
