@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "../../../lib/db";
 import { NextResponse } from "next/server";
-import { verifySessionToken } from "../../../lib/auth";
+import { getSessionCustomer } from "../../../lib/session";
 import { normalizePhone } from "../../../lib/phone";
 import { isAdmin } from "../../../lib/adminAuth";
 import { METHOD_IDS, methodMode } from "../../../lib/payments";
@@ -33,16 +33,11 @@ export async function POST(req) {
 
   const normalizedPhone = normalizePhone(phone);
 
-  // If the shopper is logged in (verified via WhatsApp OTP) and the phone
-  // matches their account, link this order to their customer record so it
-  // shows up in their /account order history automatically.
+  // Orders belong to the logged-in ACCOUNT regardless of which phone number
+  // was typed at checkout — history survives phone changes.
   let customerId = null;
-  const token = req.cookies.get("souq_session")?.value;
-  const session = token ? verifySessionToken(token) : null;
-  if (session && session.phone === normalizedPhone) {
-    const customer = await prisma.customer.findUnique({ where: { phone: normalizedPhone } });
-    if (customer) customerId = customer.id;
-  }
+  const sessionCustomer = await getSessionCustomer(req);
+  if (sessionCustomer) customerId = sessionCustomer.id;
 
   // Retry on the (rare) random ref collision instead of surfacing a 500
   // to the customer at the moment they're trying to pay.

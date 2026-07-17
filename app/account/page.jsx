@@ -25,6 +25,8 @@ export default function AccountPage() {
   const [step, setStep] = useState("phone");
   const [phone, setPhone] = useState("");
   const [dialCode, setDialCode] = useState("+222");
+  const [loginMethod, setLoginMethod] = useState("phone"); // "phone" | "email"
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [devCode, setDevCode] = useState(null);
   const [error, setError] = useState("");
@@ -71,7 +73,7 @@ export default function AccountPage() {
       const res = await fetch("/api/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, dialCode })
+        body: JSON.stringify(loginMethod === "email" ? { email } : { phone, dialCode })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
@@ -91,7 +93,7 @@ export default function AccountPage() {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, code, dialCode })
+        body: JSON.stringify(loginMethod === "email" ? { email, code } : { phone, code, dialCode })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
@@ -173,17 +175,46 @@ export default function AccountPage() {
 
         {step === "phone" && (
           <div className="space-y-3">
-            <label className="block">
-              <span className="text-sm font-bold">رقم الهاتف</span>
-              <PhoneInput value={phone} onChange={setPhone} onDialChange={setDialCode} />
-            </label>
+            <div className="flex gap-1 bg-white rounded-full border border-souq-goldlight/60 p-1">
+              <button
+                onClick={() => setLoginMethod("phone")}
+                className={`flex-1 text-sm font-bold rounded-full py-2 ${loginMethod === "phone" ? "bg-souq-green text-white" : "text-souq-ink/70"}`}
+              >
+                📱 واتساب
+              </button>
+              <button
+                onClick={() => setLoginMethod("email")}
+                className={`flex-1 text-sm font-bold rounded-full py-2 ${loginMethod === "email" ? "bg-souq-green text-white" : "text-souq-ink/70"}`}
+              >
+                ✉️ البريد الإلكتروني
+              </button>
+            </div>
+
+            {loginMethod === "phone" ? (
+              <label className="block">
+                <span className="text-sm font-bold">رقم الهاتف</span>
+                <PhoneInput value={phone} onChange={setPhone} onDialChange={setDialCode} />
+              </label>
+            ) : (
+              <label className="block">
+                <span className="text-sm font-bold">البريد الإلكتروني</span>
+                <input
+                  type="email"
+                  dir="ltr"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="mt-1 w-full rounded-xl border border-souq-goldlight bg-white px-4 py-2.5"
+                />
+              </label>
+            )}
             {error && <p className="text-red-600 text-sm font-bold">{error}</p>}
             <button
-              disabled={busy || !phone}
+              disabled={busy || (loginMethod === "phone" ? !phone : !email)}
               onClick={requestOtp}
               className="w-full bg-souq-green text-white font-bold rounded-full py-2.5 disabled:opacity-50"
             >
-              {busy ? "..." : "إرسال رمز عبر واتساب"}
+              {busy ? "..." : loginMethod === "phone" ? "إرسال رمز عبر واتساب" : "إرسال رمز إلى بريدك"}
             </button>
           </div>
         )}
@@ -242,7 +273,7 @@ export default function AccountPage() {
           )}
           <div>
             <h1 className="font-black text-xl">{customer.name ? `مرحباً ${customer.name}` : "حسابي"}</h1>
-            <p className="text-xs text-souq-ink/50" dir="ltr">{customer.phone}</p>
+            <p className="text-xs text-souq-ink/50" dir="ltr">{customer.phone || customer.email}</p>
           </div>
         </div>
         <button onClick={logout} className="text-sm font-bold text-souq-green">تسجيل الخروج</button>
@@ -322,15 +353,39 @@ export default function AccountPage() {
               />
             </label>
 
+            {customer.phone && (
+              <label className="block">
+                <span className="text-sm font-bold">رقم الهاتف</span>
+                <input
+                  type="text"
+                  dir="ltr"
+                  disabled
+                  value={customer.phone}
+                  className="mt-1 w-full rounded-xl border border-souq-goldlight bg-souq-sand px-4 py-2.5 text-souq-ink/60"
+                />
+              </label>
+            )}
+
             <label className="block">
-              <span className="text-sm font-bold">رقم الهاتف</span>
-              <input
-                type="text"
-                dir="ltr"
-                disabled
-                value={customer.phone}
-                className="mt-1 w-full rounded-xl border border-souq-goldlight bg-souq-sand px-4 py-2.5 text-souq-ink/60"
-              />
+              <span className="text-sm font-bold">البريد الإلكتروني</span>
+              {customer.email ? (
+                <input
+                  type="text"
+                  dir="ltr"
+                  disabled
+                  value={customer.email}
+                  className="mt-1 w-full rounded-xl border border-souq-goldlight bg-souq-sand px-4 py-2.5 text-souq-ink/60"
+                />
+              ) : (
+                <input
+                  type="email"
+                  dir="ltr"
+                  value={profileForm.email || ""}
+                  onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                  placeholder="you@example.com"
+                  className="mt-1 w-full rounded-xl border border-souq-goldlight bg-white px-4 py-2.5"
+                />
+              )}
             </label>
 
             {error && <p className="text-red-600 text-sm font-bold">{error}</p>}

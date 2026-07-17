@@ -26,7 +26,8 @@ model Product {
 
 model Customer {
   id            Int      @id @default(autoincrement())
-  phone         String   @unique
+  phone         String?  @unique
+  email         String?  @unique
   name          String?
   gender        String?
   age           Int?

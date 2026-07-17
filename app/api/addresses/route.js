@@ -1,14 +1,7 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "../../../lib/db";
 import { NextResponse } from "next/server";
-import { verifySessionToken } from "../../../lib/auth";
-
-async function getSessionCustomer(req) {
-  const token = req.cookies.get("souq_session")?.value;
-  const session = token ? verifySessionToken(token) : null;
-  if (!session) return null;
-  return prisma.customer.findUnique({ where: { phone: session.phone } });
-}
+import { getSessionCustomer } from "../../../lib/session";
 
 function parseAddresses(customer) {
   try {
