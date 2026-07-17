@@ -107,17 +107,41 @@ export default function AdminPage() {
     load();
   };
 
-  const saveCatImage = async (slug) => {
+  const saveCatImage = async (slug, valueOverride) => {
     setCatImgSaved("");
+    const imageUrl = valueOverride !== undefined ? valueOverride : catImages[slug] || "";
     const res = await fetch("/api/admin/category-images", {
       method: "POST",
       headers: { "x-admin-key": key, "Content-Type": "application/json" },
-      body: JSON.stringify({ slug, imageUrl: catImages[slug] || "" })
+      body: JSON.stringify({ slug, imageUrl })
     });
     if (res.ok) {
       setCatImgSaved(slug);
       setTimeout(() => setCatImgSaved(""), 2000);
     }
+  };
+
+  // Reads a picked file, center-crops to a square and resizes to 256px JPEG —
+  // small enough to store directly, sharp enough for the category circles.
+  const uploadCatImage = (slug, file) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    const img = new Image();
+    img.onload = () => {
+      const size = 256;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2;
+      const sy = (img.height - side) / 2;
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+      URL.revokeObjectURL(img.src);
+      setCatImages((prev) => ({ ...prev, [slug]: dataUrl }));
+      saveCatImage(slug, dataUrl);
+    };
+    img.src = URL.createObjectURL(file);
   };
 
   // Restore the admin session on refresh (kept for this browser tab only).
@@ -592,12 +616,24 @@ export default function AdminPage() {
                   </span>
                   <span className="w-40 text-sm font-bold shrink-0">{s2.fr} / {s2.ar}</span>
                   <input
-                    value={catImages[s2.slug] || ""}
+                    value={(catImages[s2.slug] || "").startsWith("data:") ? "(uploaded picture)" : (catImages[s2.slug] || "")}
                     onChange={(e) => setCatImages({ ...catImages, [s2.slug]: e.target.value })}
                     placeholder="https://...jpg"
                     dir="ltr"
                     className="flex-1 rounded-xl border border-souq-goldlight px-3 py-1.5 text-sm"
                   />
+                  <label className="text-xs font-bold border border-souq-green text-souq-green rounded-full px-3 py-1.5 cursor-pointer whitespace-nowrap">
+                    Upload
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        uploadCatImage(s2.slug, e.target.files && e.target.files[0]);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
                   <button
                     onClick={() => saveCatImage(s2.slug)}
                     className="text-xs font-bold bg-souq-green text-white rounded-full px-4 py-1.5"
