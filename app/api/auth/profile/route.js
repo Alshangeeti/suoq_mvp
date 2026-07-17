@@ -3,6 +3,8 @@ import { prisma } from "../../../../lib/db";
 import { NextResponse } from "next/server";
 import { getSessionCustomer } from "../../../../lib/session";
 import { isValidEmail } from "../../../../lib/email";
+import { hashPassword } from "../../../../lib/password";
+import { normalizePhone } from "../../../../lib/phone";
 
 export async function PATCH(req) {
   const me = await getSessionCustomer(req);
@@ -16,6 +18,22 @@ export async function PATCH(req) {
   if (body.age !== undefined && body.age !== null && body.age !== "") {
     const age = parseInt(body.age, 10);
     if (!Number.isNaN(age) && age > 0 && age < 120) data.age = age;
+  }
+
+  if (body.phone !== undefined && body.phone !== null && body.phone !== "") {
+    const phone = normalizePhone(body.phone, body.dialCode);
+    if (!phone || phone.length < 8) {
+      return NextResponse.json({ error: "Invalid phone" }, { status: 400 });
+    }
+    data.phone = phone;
+  }
+
+  if (body.password !== undefined && body.password !== null && body.password !== "") {
+    const password = String(body.password);
+    if (password.length < 6) {
+      return NextResponse.json({ error: "PASSWORD_TOO_SHORT" }, { status: 400 });
+    }
+    data.passwordHash = hashPassword(password);
   }
 
   if (body.email !== undefined) {
@@ -35,7 +53,9 @@ export async function PATCH(req) {
     customer = await prisma.customer.update({ where: { id: me.id }, data });
   } catch (e) {
     if (e && e.code === "P2002") {
-      return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+      const target = String((e.meta && e.meta.target) || "");
+      const which = target.includes("phone") ? "PHONE_IN_USE" : "EMAIL_IN_USE";
+      return NextResponse.json({ error: which }, { status: 409 });
     }
     throw e;
   }

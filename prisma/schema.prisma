@@ -28,6 +28,7 @@ model Customer {
   id            Int      @id @default(autoincrement())
   phone         String?  @unique
   email         String?  @unique
+  passwordHash  String?
   name          String?
   gender        String?
   age           Int?

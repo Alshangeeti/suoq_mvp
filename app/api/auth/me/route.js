@@ -27,7 +27,8 @@ export async function GET(req) {
       email: customer.email,
       name: customer.name,
       gender: customer.gender,
-      age: customer.age
+      age: customer.age,
+      hasPassword: !!customer.passwordHash
     },
     orders
   });

@@ -34,7 +34,7 @@ export default function PhoneInput({ value, onChange, onDialChange, placeholder 
         dir="ltr"
         inputMode="numeric"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
         placeholder={placeholder}
         className="flex-1 rounded-xl border border-souq-goldlight bg-white px-4 py-2.5 focus:outline-none focus:border-souq-green"
       />

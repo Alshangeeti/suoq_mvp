@@ -31,6 +31,9 @@ export default function AccountPage() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [devCode, setDevCode] = useState(null);
+  const [authMode, setAuthMode] = useState("otp"); // "otp" | "password"
+  const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -118,6 +121,82 @@ export default function AccountPage() {
     if (setGlobalCustomer) setGlobalCustomer(null);
   };
 
+  const translateError = (msg) => {
+    const map = {
+      INVALID_CREDENTIALS: t("invalidCredentials"),
+      PASSWORD_TOO_SHORT: t("passwordTooShort"),
+      PHONE_IN_USE: t("phoneInUse"),
+      EMAIL_IN_USE: t("emailInUse")
+    };
+    return map[msg] || msg;
+  };
+
+  const idPayload = () =>
+    loginMethod === "email" ? { email } : { phone, dialCode };
+
+  const loginWithPassword = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/login-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...idPayload(), password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      await loadMe();
+      setPassword("");
+    } catch (e) {
+      setError(translateError(e.message));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startForgot = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/request-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(idPayload())
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setDevCode(data.testMode ? data.devCode : null);
+      setStep("reset");
+    } catch (e) {
+      setError(translateError(e.message));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitReset = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...idPayload(), code, newPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      await loadMe();
+      setStep("phone");
+      setCode("");
+      setNewPassword("");
+      setDevCode(null);
+    } catch (e) {
+      setError(translateError(e.message));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const saveProfile = async () => {
     setError("");
     setBusy(true);
@@ -134,7 +213,7 @@ export default function AccountPage() {
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 2500);
     } catch (e) {
-      setError(e.message);
+      setError(translateError(e.message));
     } finally {
       setBusy(false);
     }
@@ -210,13 +289,105 @@ export default function AccountPage() {
                 />
               </label>
             )}
+            <div className="flex gap-1 bg-souq-sand rounded-full border border-souq-goldlight/40 p-1">
+              <button
+                onClick={() => setAuthMode("otp")}
+                className={`flex-1 text-xs font-bold rounded-full py-1.5 ${authMode === "otp" ? "bg-white shadow text-souq-green" : "text-souq-ink/60"}`}
+              >
+                {t("loginWithCode")}
+              </button>
+              <button
+                onClick={() => setAuthMode("password")}
+                className={`flex-1 text-xs font-bold rounded-full py-1.5 ${authMode === "password" ? "bg-white shadow text-souq-green" : "text-souq-ink/60"}`}
+              >
+                {t("loginWithPassword")}
+              </button>
+            </div>
+
+            {authMode === "password" && (
+              <label className="block">
+                <span className="text-sm font-bold">{t("passwordLabel")}</span>
+                <input
+                  type="password"
+                  dir="ltr"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-souq-goldlight bg-white px-4 py-2.5"
+                />
+              </label>
+            )}
+
+            {error && <p className="text-red-600 text-sm font-bold">{error}</p>}
+
+            {authMode === "otp" ? (
+              <button
+                disabled={busy || (loginMethod === "phone" ? !phone : !email)}
+                onClick={requestOtp}
+                className="w-full bg-souq-green text-white font-bold rounded-full py-2.5 disabled:opacity-50"
+              >
+                {busy ? "..." : loginMethod === "phone" ? "إرسال رمز عبر واتساب" : "إرسال رمز إلى بريدك"}
+              </button>
+            ) : (
+              <>
+                <button
+                  disabled={busy || !password || (loginMethod === "phone" ? !phone : !email)}
+                  onClick={loginWithPassword}
+                  className="w-full bg-souq-green text-white font-bold rounded-full py-2.5 disabled:opacity-50"
+                >
+                  {busy ? "..." : "تسجيل الدخول"}
+                </button>
+                <button
+                  disabled={busy || (loginMethod === "phone" ? !phone : !email)}
+                  onClick={startForgot}
+                  className="w-full text-sm font-bold text-souq-green disabled:opacity-50"
+                >
+                  {t("forgotPassword")}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {step === "reset" && (
+          <div className="space-y-3">
+            {devCode && (
+              <div className="bg-souq-gold/20 border border-souq-gold rounded-xl p-3 text-sm">
+                <p className="font-bold">وضع الاختبار</p>
+                <p>رمزك هو: <span className="font-mono font-black">{devCode}</span></p>
+              </div>
+            )}
+            <label className="block">
+              <span className="text-sm font-bold">رمز التحقق</span>
+              <input
+                type="text"
+                dir="ltr"
+                inputMode="numeric"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="123456"
+                className="mt-1 w-full rounded-xl border border-souq-goldlight bg-white px-4 py-2.5"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold">{t("newPassword")}</span>
+              <input
+                type="password"
+                dir="ltr"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-souq-goldlight bg-white px-4 py-2.5"
+              />
+            </label>
             {error && <p className="text-red-600 text-sm font-bold">{error}</p>}
             <button
-              disabled={busy || (loginMethod === "phone" ? !phone : !email)}
-              onClick={requestOtp}
+              disabled={busy || !code || newPassword.length < 6}
+              onClick={submitReset}
               className="w-full bg-souq-green text-white font-bold rounded-full py-2.5 disabled:opacity-50"
             >
-              {busy ? "..." : loginMethod === "phone" ? "إرسال رمز عبر واتساب" : "إرسال رمز إلى بريدك"}
+              {busy ? "..." : t("resetPassword")}
+            </button>
+            <button onClick={() => setStep("phone")} className="w-full text-sm text-souq-ink/60">
+              {t("cancel")}
             </button>
           </div>
         )}
@@ -235,7 +406,7 @@ export default function AccountPage() {
                 type="text"
                 dir="ltr"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 placeholder="123456"
                 className="mt-1 w-full rounded-xl border border-souq-goldlight bg-white px-4 py-2.5"
               />
@@ -355,7 +526,7 @@ export default function AccountPage() {
               />
             </label>
 
-            {customer.phone && (
+            {customer.phone ? (
               <label className="block">
                 <span className="text-sm font-bold">رقم الهاتف</span>
                 <input
@@ -366,7 +537,28 @@ export default function AccountPage() {
                   className="mt-1 w-full rounded-xl border border-souq-goldlight bg-souq-sand px-4 py-2.5 text-souq-ink/60"
                 />
               </label>
+            ) : (
+              <label className="block">
+                <span className="text-sm font-bold">رقم الهاتف (إضافة)</span>
+                <PhoneInput
+                  value={profileForm.phone || ""}
+                  onChange={(v) => setProfileForm({ ...profileForm, phone: v })}
+                  onDialChange={(d) => setProfileForm({ ...profileForm, dialCode: d })}
+                />
+              </label>
             )}
+
+            <label className="block">
+              <span className="text-sm font-bold">{customer.hasPassword ? "تغيير كلمة المرور" : "تعيين كلمة مرور (للدخول بدون رمز)"}</span>
+              <input
+                type="password"
+                dir="ltr"
+                value={profileForm.password || ""}
+                onChange={(e) => setProfileForm({ ...profileForm, password: e.target.value })}
+                placeholder="••••••"
+                className="mt-1 w-full rounded-xl border border-souq-goldlight bg-white px-4 py-2.5"
+              />
+            </label>
 
             <label className="block">
               <span className="text-sm font-bold">البريد الإلكتروني</span>
