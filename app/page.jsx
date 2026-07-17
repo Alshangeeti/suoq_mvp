@@ -3,24 +3,43 @@ import { prisma } from "../lib/db";
 import HomeClient from "../components/HomeClient";
 import { getCategoryTree } from "../lib/categories";
 
-// Server-rendered homepage: products arrive in the initial HTML (faster
-// first paint, crawlable content) instead of a client-side fetch.
+const PAGE_SIZE = 24;
+
+// Server-rendered homepage: first page of products + category tree arrive in
+// the initial HTML; further pages/filters go through /api/products/list.
 export default async function Home({ searchParams }) {
-  let products = [];
+  const cat = searchParams?.cat || "";
+  const sub = searchParams?.sub || "";
+  const q = (searchParams?.q || "").trim();
+
+  let items = [];
+  let total = 0;
   let tree = [];
-  let loadError = false;
   try {
-    products = await prisma.product.findMany({ orderBy: { id: "asc" } });
     tree = await getCategoryTree();
+    const where = {};
+    if (cat && cat !== "all") where.category = cat;
+    if (sub) where.subcategory = sub;
+    if (q) {
+      where.OR = [
+        { nameAr: { contains: q, mode: "insensitive" } },
+        { nameFr: { contains: q, mode: "insensitive" } },
+        { descAr: { contains: q, mode: "insensitive" } },
+        { descFr: { contains: q, mode: "insensitive" } }
+      ];
+    }
+    [total, items] = await Promise.all([
+      prisma.product.count({ where }),
+      prisma.product.findMany({ where, orderBy: { id: "desc" }, take: PAGE_SIZE })
+    ]);
   } catch (e) {
-    console.error("Home products load failed:", e);
-    loadError = true;
+    console.error("Home load failed:", e);
   }
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    itemListElement: products.map((p, i) => ({
+    itemListElement: items.map((p, i) => ({
       "@type": "ListItem",
       position: i + 1,
       item: {
@@ -46,12 +65,12 @@ export default async function Home({ searchParams }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <HomeClient
-        products={products}
         tree={tree}
-        loadError={loadError}
-        initialCat={searchParams?.cat || "all"}
-        initialSub={searchParams?.sub || ""}
-        initialQuery={searchParams?.q || ""}
+        initialItems={items}
+        initialTotal={total}
+        initialCat={cat || "all"}
+        initialSub={sub}
+        initialQuery={q}
       />
     </>
   );

@@ -2,16 +2,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useStore } from "../lib/store";
-import ProductCard from "./ProductCard";
+import ProductListing from "./ProductListing";
 
-// Category screen: subcategory photo circles on top (admin-managed images),
-// the category's products below — tapping a circle filters to that sub.
-export default function CategoryClient({ cat, products, imageMap }) {
+// Category screen: subcategory photo circles on top, the shared listing
+// engine (sort/filter/pagination) below.
+export default function CategoryClient({ cat, imageMap, initialItems = null, initialTotal = 0 }) {
   const { t, lang } = useStore();
   const [sub, setSub] = useState("");
   const name = (item) => (lang === "ar" ? item.ar : item.fr);
-
-  const shown = sub ? products.filter((p) => p.subcategory === sub) : products;
 
   const circle = (label, slug, imageUrl, selected) => (
     <button
@@ -51,15 +49,12 @@ export default function CategoryClient({ cat, products, imageMap }) {
         {cat.subs.map((s) => circle(name(s), s.slug, imageMap[s.slug] || null, sub === s.slug))}
       </div>
 
-      {shown.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {shown.map((p) => (
-            <ProductCard key={p.id} p={p} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-center text-souq-ink/50 py-16">{t("noResults")}</p>
-      )}
+      <ProductListing
+        cat={cat.slug}
+        sub={sub}
+        initialItems={sub === "" ? initialItems : null}
+        initialTotal={initialTotal}
+      />
     </div>
   );
 }

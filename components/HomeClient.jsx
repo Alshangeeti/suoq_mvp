@@ -1,26 +1,24 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "../lib/store";
-import ProductCard from "./ProductCard";
+import ProductListing from "./ProductListing";
 
-export default function HomeClient({ products = [], tree = [], loadError = false, initialCat = "all", initialSub = "", initialQuery = "" }) {
+export default function HomeClient({ tree = [], initialItems = null, initialTotal = 0, initialCat = "all", initialSub = "", initialQuery = "" }) {
   const { t, lang } = useStore();
   const [cat, setCat] = useState(tree.some((x) => x.slug === initialCat) ? initialCat : "all");
   const [sub, setSub] = useState(initialSub || "");
   const [query, setQuery] = useState(initialQuery);
+  const [debouncedQ, setDebouncedQ] = useState(initialQuery);
   const catName = (item) => (lang === "ar" ? item.ar : item.fr);
   const activeTree = tree.find((x) => x.slug === cat);
 
-  let byCat = cat === "all" ? products : products.filter((p) => p.category === cat);
-  if (cat !== "all" && sub) byCat = byCat.filter((p) => p.subcategory === sub);
-  const q = query.trim().toLowerCase();
-  const shown = !q
-    ? byCat
-    : byCat.filter((p) =>
-        [p.nameAr, p.nameFr, p.descAr, p.descFr]
-          .filter(Boolean)
-          .some((s) => s.toLowerCase().includes(q))
-      );
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQ(query.trim()), 400);
+    return () => clearTimeout(id);
+  }, [query]);
+
+  const catUnchanged = cat === (tree.some((x) => x.slug === initialCat) ? initialCat : "all");
+  const useInitial = catUnchanged && sub === (initialSub || "") && debouncedQ === initialQuery;
 
   return (
     <div>
@@ -77,7 +75,7 @@ export default function HomeClient({ products = [], tree = [], loadError = false
         ))}
       </div>
 
-      {activeTree && (
+      {activeTree && activeTree.subs.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-3 -mt-1">
           {activeTree.subs.map((s2) => (
             <button
@@ -95,33 +93,21 @@ export default function HomeClient({ products = [], tree = [], loadError = false
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {shown.map((p) => (
-          <ProductCard key={p.id} p={p} />
-        ))}
-      </div>
-      {shown.length === 0 && products.length > 0 && (
-        <p className="text-center text-souq-ink/50 py-10">{t("noResults")}</p>
-      )}
-      {loadError && (
-        <div className="text-center py-10">
-          <p className="text-souq-ink/60 font-bold mb-3">{t("loadError")}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-souq-green text-white font-bold rounded-full px-6 py-2"
-          >
-            {t("retry")}
-          </button>
-        </div>
-      )}
+      <ProductListing
+        cat={cat === "all" ? "" : cat}
+        sub={sub}
+        q={debouncedQ}
+        initialItems={useInitial ? initialItems : null}
+        initialTotal={initialTotal}
+      />
 
       <section className="mt-12">
-        <h2 className="text-2xl font-black text-souq-green mb-4">{t("trust")}</h2>
-        <div className="grid sm:grid-cols-3 gap-4">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="bg-white rounded-2xl border border-souq-goldlight/60 p-5">
-              <h3 className="font-bold text-souq-deep">{t(`trust${n}T`)}</h3>
-              <p className="text-sm text-souq-ink/60 mt-1">{t(`trust${n}D`)}</p>
+        <h2 className="text-xl font-black text-souq-green text-center mb-6">{t("trust")}</h2>
+        <div className="grid md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-2xl border border-souq-goldlight/60 p-5 text-center">
+              <h3 className="font-black text-souq-green">{t(`trust${i}T`)}</h3>
+              <p className="mt-1 text-sm text-souq-ink/70">{t(`trust${i}D`)}</p>
             </div>
           ))}
         </div>
