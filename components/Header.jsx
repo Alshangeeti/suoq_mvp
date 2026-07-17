@@ -5,11 +5,20 @@ import { useRouter } from "next/navigation";
 import { useStore } from "../lib/store";
 import AccountIcon from "./AccountIcon";
 import HeaderCategoryMenu from "./HeaderCategoryMenu";
+import { useEffect } from "react";
+import { getWishlist } from "../lib/wishlist";
 
 export default function Header() {
   const { t, lang, setLang, count, customer } = useStore();
   const router = useRouter();
   const [q, setQ] = useState("");
+  const [wishCount, setWishCount] = useState(0);
+  useEffect(() => {
+    const sync = () => setWishCount(getWishlist().length);
+    sync();
+    window.addEventListener("souq-wishlist", sync);
+    return () => window.removeEventListener("souq-wishlist", sync);
+  }, []);
   const submitSearch = (e) => {
     e.preventDefault();
     router.push(q.trim() ? `/?q=${encodeURIComponent(q.trim())}` : "/");
@@ -43,6 +52,16 @@ export default function Header() {
           >
             {lang === "ar" ? "FR" : "عربي"}
           </button>
+          <Link href="/wishlist" aria-label={t("wishlist")} className="relative hidden md:block">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z" />
+            </svg>
+            {wishCount > 0 && (
+              <span className="absolute -top-1 -end-2 bg-souq-gold text-souq-deep text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {wishCount}
+              </span>
+            )}
+          </Link>
           <Link href="/account" aria-label="account">
             <AccountIcon gender={customer?.gender} />
           </Link>

@@ -107,9 +107,21 @@ export default function ProductDetailClient({ product, related, catInfo }) {
           <h1 className="text-2xl md:text-3xl font-black leading-snug">{name}</h1>
           <p className="mt-3 text-souq-ink/70">{desc}</p>
 
-          <p className="mt-5 font-black text-souq-green text-4xl">
-            {product.priceMru.toLocaleString()} <span className="text-base">{t("mru")}</span>
-          </p>
+          <div className="mt-5 flex items-baseline gap-3 flex-wrap">
+            <p className="font-black text-souq-green text-4xl">
+              {product.priceMru.toLocaleString()} <span className="text-base">{t("mru")}</span>
+            </p>
+            {product.originalPriceMru && product.originalPriceMru > product.priceMru && (
+              <>
+                <span className="text-xl text-souq-ink/40 line-through">
+                  {product.originalPriceMru.toLocaleString()}
+                </span>
+                <span className="bg-red-600 text-white text-sm font-black rounded-md px-2 py-0.5">
+                  -{Math.round(((product.originalPriceMru - product.priceMru) / product.originalPriceMru) * 100)}%
+                </span>
+              </>
+            )}
+          </div>
 
           <p className={`mt-3 text-sm font-bold rounded-full px-3 py-1 w-fit ${
             product.stocked ? "bg-souq-green/10 text-souq-green" : "bg-souq-gold/20 text-souq-deep"
