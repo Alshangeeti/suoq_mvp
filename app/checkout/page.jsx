@@ -207,7 +207,18 @@ export default function CheckoutPage() {
                 paymentMethod === m.id ? "border-souq-green bg-souq-green/5" : "border-souq-goldlight bg-white"
               }`}
             >
-              <span className="text-2xl">{m.icon}</span>
+              {m.logo ? (
+                <img
+                  src={m.logo}
+                  alt=""
+                  className="w-10 h-10 rounded-lg object-contain bg-white"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                    e.currentTarget.nextSibling.style.display = "inline";
+                  }}
+                />
+              ) : null}
+              <span className="text-2xl" style={m.logo ? { display: "none" } : undefined}>{m.icon}</span>
               <span className="flex-1">
                 <span className="font-bold block">{t(m.labelKey)}</span>
                 <span className="text-xs text-souq-ink/60">{t(m.descKey)}</span>
