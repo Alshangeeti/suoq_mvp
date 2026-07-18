@@ -458,12 +458,27 @@ export default function AdminPage() {
         )}
         {items.length > 0 && (
           <div className="mt-3 pt-3 border-t border-souq-goldlight/40 text-sm space-y-1">
-            {items.map((it, idx) => (
-              <div key={idx} className="flex justify-between text-souq-ink/80">
-                <span>{it.emoji} {it.nameFr || it.nameAr}{it.variantLabel ? ` (${it.variantLabel})` : ""} × {it.qty}</span>
-                <span>{(it.priceMru * it.qty).toLocaleString()} MRU</span>
-              </div>
-            ))}
+            {items.map((it, idx) => {
+              const prod = products.find((pp) => pp.id === it.id);
+              return (
+                <div key={idx} className="flex items-center justify-between gap-2 text-souq-ink/80">
+                  <span className="flex-1">
+                    {it.emoji} {it.nameFr || it.nameAr}{it.variantLabel ? ` (${it.variantLabel})` : ""} × {it.qty}
+                  </span>
+                  {prod && prod.aliexpressId && (o.status === "PAID" || o.status === "COD") && (
+                    <a
+                      href={`https://www.aliexpress.com/item/${prod.aliexpressId}.html`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] font-bold bg-souq-gold/20 border border-souq-gold text-souq-deep rounded-full px-2 py-0.5 shrink-0"
+                    >
+                      source ↗
+                    </a>
+                  )}
+                  <span className="shrink-0">{(it.priceMru * it.qty).toLocaleString()} MRU</span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
