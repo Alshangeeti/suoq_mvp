@@ -32,6 +32,8 @@ async function cleanProduct(body) {
   }
   const aliexpressId = String(body.aliexpressId || "").trim().slice(0, 30) || null;
   const skuAttr = String(body.skuAttr || "").trim().slice(0, 300) || null;
+  let url1688 = String(body.url1688 || "").trim().slice(0, 500) || null;
+  if (url1688 && !/1688\.com/.test(url1688)) url1688 = null;
   let variantsJson = "[]";
   if (Array.isArray(body.variants)) {
     variantsJson = JSON.stringify(
@@ -56,7 +58,7 @@ async function cleanProduct(body) {
     nameAr, nameFr, descAr, descFr, priceMru,
     originalPriceMru: originalPriceMru && !Number.isNaN(originalPriceMru) && originalPriceMru > priceMru ? originalPriceMru : null,
     category, subcategory, emoji, stocked,
-    imageUrl, imagesJson, aliexpressId, skuAttr, variantsJson,
+    imageUrl, imagesJson, aliexpressId, url1688, skuAttr, variantsJson,
     costUsd: costUsd !== null && !Number.isNaN(costUsd) ? costUsd : null
   };
 }

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 const EMPTY_PRODUCT = {
   id: null, nameAr: "", nameFr: "", descAr: "", descFr: "",
-  priceMru: "", originalPriceMru: "", category: "home", subcategory: "", emoji: "📦", stocked: false
+  priceMru: "", originalPriceMru: "", category: "home", subcategory: "", emoji: "📦", stocked: false, url1688: ""
 };
 const STATUS_BADGE = {
   PAID: "bg-souq-green text-white",
@@ -465,14 +465,18 @@ export default function AdminPage() {
                   <span className="flex-1">
                     {it.emoji} {it.nameFr || it.nameAr}{it.variantLabel ? ` (${it.variantLabel})` : ""} × {it.qty}
                   </span>
-                  {prod && prod.aliexpressId && (o.status === "PAID" || o.status === "COD") && (
+                  {prod && (prod.url1688 || prod.aliexpressId) && (o.status === "PAID" || o.status === "COD") && (
                     <a
-                      href={`https://www.aliexpress.com/item/${prod.aliexpressId}.html`}
+                      href={prod.url1688 || `https://www.aliexpress.com/item/${prod.aliexpressId}.html`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[10px] font-bold bg-souq-gold/20 border border-souq-gold text-souq-deep rounded-full px-2 py-0.5 shrink-0"
+                      className={`text-[10px] font-bold border rounded-full px-2 py-0.5 shrink-0 ${
+                        prod.url1688
+                          ? "bg-orange-100 border-orange-400 text-orange-700"
+                          : "bg-souq-gold/20 border-souq-gold text-souq-deep"
+                      }`}
                     >
-                      source ↗
+                      {prod.url1688 ? "1688 ↗" : "AE ↗"}
                     </a>
                   )}
                   <span className="shrink-0">{(it.priceMru * it.qty).toLocaleString()} MRU</span>
@@ -518,13 +522,13 @@ export default function AdminPage() {
       )}
 
       <div className="flex gap-1 mb-5 bg-white text-souq-ink rounded-full border border-souq-goldlight/60 p-1 w-fit">
-        {["orders", "products"].map((k) => (
+        {["orders", "products", "sourcing"].map((k) => (
           <button
             key={k}
             onClick={() => setTab(k)}
             className={`text-sm font-bold rounded-full py-2 px-5 capitalize ${tab === k ? "bg-souq-green text-white" : "text-souq-ink/70"}`}
           >
-            {k} ({k === "orders" ? orders.length : products.length})
+            {k} ({k === "orders" ? orders.length : k === "products" ? products.length : orders.filter((o) => (o.status === "PAID" || o.status === "COD") && ["RECEIVED", "IN_PROGRESS"].includes(o.fulfillmentStatus || "RECEIVED")).length})
           </button>
         ))}
       </div>
@@ -611,6 +615,7 @@ export default function AdminPage() {
               <input value={form.descFr} onChange={(e) => setForm({ ...form, descFr: e.target.value })} placeholder="Description (French)" className="rounded-xl border border-souq-goldlight px-3 py-2" />
               <input value={form.priceMru} onChange={(e) => setForm({ ...form, priceMru: e.target.value })} placeholder="Price (MRU)" type="number" className="rounded-xl border border-souq-goldlight px-3 py-2" />
               <input value={form.originalPriceMru || ""} onChange={(e) => setForm({ ...form, originalPriceMru: e.target.value })} placeholder="Original price before discount (optional)" type="number" className="rounded-xl border border-souq-goldlight px-3 py-2" />
+              <input value={form.url1688 || ""} onChange={(e) => setForm({ ...form, url1688: e.target.value })} placeholder="1688 link for sourcing (optional)" dir="ltr" className="rounded-xl border border-souq-goldlight px-3 py-2 md:col-span-2" />
               <div className="flex gap-2">
                 <select
                   value={form.category}
@@ -810,6 +815,16 @@ export default function AdminPage() {
                           {p.costUsd ? ` · cost $${p.costUsd}` : ""}
                         </p>
                       </div>
+                      {p.url1688 && (
+                        <a
+                          href={p.url1688}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-bold bg-orange-100 border border-orange-400 text-orange-700 rounded-full px-3 py-1"
+                        >
+                          1688 ↗
+                        </a>
+                      )}
                       {p.aliexpressId ? (
                         <a
                           href={`https://www.aliexpress.com/item/${p.aliexpressId}.html`}
@@ -860,6 +875,85 @@ export default function AdminPage() {
           })()}
         </div>
       )}
+
+      {tab === "sourcing" && (() => {
+        const toSource = orders.filter(
+          (o) => (o.status === "PAID" || o.status === "COD") && ["RECEIVED", "IN_PROGRESS"].includes(o.fulfillmentStatus || "RECEIVED")
+        );
+        const rows = [];
+        for (const o of toSource) {
+          let items = [];
+          try { items = JSON.parse(o.itemsJson || "[]"); } catch {}
+          for (const it of items) {
+            const prod = products.find((pp) => pp.id === it.id);
+            rows.push({
+              ref: o.ref,
+              name: it.nameFr || it.nameAr,
+              variant: it.variantLabel || "",
+              qty: it.qty,
+              costUsd: prod && prod.costUsd ? prod.costUsd : "",
+              link1688: prod && prod.url1688 ? prod.url1688 : "",
+              linkAe: prod && prod.aliexpressId ? `https://www.aliexpress.com/item/${prod.aliexpressId}.html` : "",
+              stocked: prod ? (prod.stocked ? "warehouse-stock" : "to-buy") : "unknown"
+            });
+          }
+        }
+        const downloadCsv = () => {
+          const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+          const head = ["order_ref", "product", "variant", "qty", "cost_usd", "link_1688", "link_aliexpress", "type"];
+          const lines = [head.join(",")].concat(
+            rows.map((r) => [r.ref, r.name, r.variant, r.qty, r.costUsd, r.link1688, r.linkAe, r.stocked].map(esc).join(","))
+          );
+          const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = `sourcing-${new Date().toISOString().slice(0, 10)}.csv`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+        };
+        return (
+          <div>
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <p className="text-sm font-bold text-white/80">
+                {rows.length} item(s) from {toSource.length} confirmed order(s) awaiting purchase
+              </p>
+              <button
+                onClick={downloadCsv}
+                disabled={rows.length === 0}
+                className="text-sm font-bold bg-souq-gold text-souq-deep rounded-full px-5 py-2 disabled:opacity-40"
+              >
+                ⬇ Export CSV (for ERP / team)
+              </button>
+            </div>
+            <div className="space-y-2">
+              {rows.map((r, i) => (
+                <div key={i} className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-3 flex items-center gap-3 flex-wrap">
+                  <span className="font-mono text-xs font-bold text-souq-ink/50">{r.ref}</span>
+                  <span className="flex-1 min-w-[180px] text-sm font-bold">
+                    {r.name}{r.variant ? ` (${r.variant})` : ""}
+                  </span>
+                  <span className="text-sm font-black">× {r.qty}</span>
+                  {r.costUsd && <span className="text-xs text-souq-ink/50">${r.costUsd}</span>}
+                  <span className={`text-[10px] font-bold rounded-full px-2 py-0.5 ${r.stocked === "warehouse-stock" ? "bg-souq-green/10 text-souq-green" : "bg-orange-100 text-orange-700"}`}>
+                    {r.stocked}
+                  </span>
+                  {r.link1688 && (
+                    <a href={r.link1688} target="_blank" rel="noreferrer" className="text-xs font-bold bg-orange-100 border border-orange-400 text-orange-700 rounded-full px-3 py-1">
+                      1688 ↗
+                    </a>
+                  )}
+                  {r.linkAe && (
+                    <a href={r.linkAe} target="_blank" rel="noreferrer" className="text-xs font-bold bg-souq-gold/20 border border-souq-gold text-souq-deep rounded-full px-3 py-1">
+                      AE ↗
+                    </a>
+                  )}
+                </div>
+              ))}
+              {rows.length === 0 && <p className="text-center text-white/50 py-10">Nothing awaiting purchase 🎉</p>}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
