@@ -85,7 +85,11 @@ export default function ProductCard({ p }) {
           {p.stocked ? t("deliveryShortStocked") : t("deliveryShortOnDemand")}
         </span>
 
-        {hasChoices ? (
+        {p.stockQty === 0 ? (
+          <span className="mt-auto w-full text-center text-xs font-bold rounded-full py-1.5 bg-souq-goldlight/40 text-souq-ink/50">
+            {t("outOfStock")}
+          </span>
+        ) : hasChoices ? (
           <Link
             href={`/product/${p.id}`}
             className="mt-auto w-full text-center text-xs font-bold rounded-full py-1.5 bg-souq-green text-white hover:bg-souq-deep transition"

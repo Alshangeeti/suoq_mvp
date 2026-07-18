@@ -86,7 +86,12 @@ export default function ProductDetailClient({ product, related, catInfo }) {
     timer.current = setTimeout(() => setAdded(false), 1500);
   };
 
-  const addButton = (extra = "") => (
+  const outOfStock = product.stockQty === 0;
+  const addButton = (extra = "") => outOfStock ? (
+    <span className={`font-black rounded-full py-3 px-8 bg-souq-goldlight/40 text-souq-ink/50 text-center ${extra}`}>
+      {t("outOfStock")}
+    </span>
+  ) : (
     <button
       onClick={handleAdd}
       className={`font-black rounded-full py-3 px-8 transition ${extra} ${

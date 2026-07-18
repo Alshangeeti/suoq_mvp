@@ -44,6 +44,7 @@ export default function AdminPage() {
   const [prodCatFilter, setProdCatFilter] = useState("");
   const [prodPage, setProdPage] = useState(1);
   const [inlinePrices, setInlinePrices] = useState({});
+  const [sellers, setSellers] = useState([]);
   const [bulkRunning, setBulkRunning] = useState(false);
   const [bulkLog, setBulkLog] = useState([]);
   const [bulkTotal, setBulkTotal] = useState(0);
@@ -65,6 +66,11 @@ export default function AdminPage() {
     if (ci.ok) {
       const data = await ci.json();
       setCatImages(data.images || {});
+    }
+    const se = await fetch("/api/admin/sellers", { headers: { "x-admin-key": k } });
+    if (se.ok) {
+      const data = await se.json();
+      setSellers(data.sellers || []);
     }
     const ct = await fetch("/api/categories");
     if (ct.ok) {
@@ -99,6 +105,19 @@ export default function AdminPage() {
     const data = await res.json();
     if (!res.ok) return setCatError(data.error || "Failed");
     setNewSub({ categorySlug: newSub.categorySlug, ar: "", fr: "" });
+    load();
+  };
+
+  const sellerAction = async (id, action) => {
+    let note = "";
+    if (action === "reject") {
+      note = prompt("Rejection note shown to the seller (optional):") || "";
+    }
+    await fetch("/api/admin/sellers", {
+      method: "PATCH",
+      headers: { "x-admin-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ id, action, note })
+    });
     load();
   };
 
@@ -522,13 +541,13 @@ export default function AdminPage() {
       )}
 
       <div className="flex gap-1 mb-5 bg-white text-souq-ink rounded-full border border-souq-goldlight/60 p-1 w-fit">
-        {["orders", "products", "sourcing"].map((k) => (
+        {["orders", "products", "sourcing", "sellers"].map((k) => (
           <button
             key={k}
             onClick={() => setTab(k)}
             className={`text-sm font-bold rounded-full py-2 px-5 capitalize ${tab === k ? "bg-souq-green text-white" : "text-souq-ink/70"}`}
           >
-            {k} ({k === "orders" ? orders.length : k === "products" ? products.length : orders.filter((o) => (o.status === "PAID" || o.status === "COD") && ["RECEIVED", "IN_PROGRESS"].includes(o.fulfillmentStatus || "RECEIVED")).length})
+            {k} ({k === "orders" ? orders.length : k === "products" ? products.length : k === "sellers" ? sellers.length : orders.filter((o) => (o.status === "PAID" || o.status === "COD") && ["RECEIVED", "IN_PROGRESS"].includes(o.fulfillmentStatus || "RECEIVED")).length})
           </button>
         ))}
       </div>
@@ -954,6 +973,50 @@ export default function AdminPage() {
           </div>
         );
       })()}
+
+      {tab === "sellers" && (
+        <div className="space-y-3">
+          {sellers.map((s) => (
+            <div key={s.id} className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-[200px]">
+                  <p className="font-black">{s.businessName}</p>
+                  <p className="text-sm text-souq-ink/70">{s.ownerName} · {s.phone} · {s.city || "—"}</p>
+                  <p className="text-xs text-souq-ink/50" dir="ltr">{s.email}</p>
+                </div>
+                <span className="text-xs font-bold text-souq-ink/50">{s.productCount} products</span>
+                <span className={`text-xs font-bold rounded-full px-3 py-1 ${
+                  s.status === "APPROVED" ? "bg-souq-green text-white" : s.status === "REJECTED" ? "bg-red-600 text-white" : "bg-souq-gold text-souq-deep"
+                }`}>
+                  {s.status}
+                </span>
+                {s.status !== "APPROVED" && (
+                  <button onClick={() => sellerAction(s.id, "approve")} className="text-xs font-bold bg-souq-green text-white rounded-full px-4 py-1.5">
+                    ✓ Approve
+                  </button>
+                )}
+                {s.status !== "REJECTED" && (
+                  <button onClick={() => sellerAction(s.id, "reject")} className="text-xs font-bold border border-red-500 text-red-600 rounded-full px-4 py-1.5">
+                    ✗ Reject
+                  </button>
+                )}
+              </div>
+              {s.description && (
+                <p className="mt-2 pt-2 border-t border-souq-goldlight/40 text-sm text-souq-ink/80">
+                  <span className="font-bold">Activity: </span>{s.description}
+                </p>
+              )}
+              {s.licenseInfo && (
+                <p className="text-xs text-souq-ink/60 mt-1"><span className="font-bold">License: </span>{s.licenseInfo}</p>
+              )}
+              {s.rejectionNote && (
+                <p className="text-xs text-red-600 mt-1"><span className="font-bold">Rejection note: </span>{s.rejectionNote}</p>
+              )}
+            </div>
+          ))}
+          {sellers.length === 0 && <p className="text-center text-white/50 py-10">No seller applications yet</p>}
+        </div>
+      )}
     </div>
   );
 }

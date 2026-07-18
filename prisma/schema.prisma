@@ -23,6 +23,8 @@ model Product {
   imagesJson   String  @default("[]")
   aliexpressId String?
   url1688      String?
+  sellerId     Int?
+  stockQty     Int?
   skuAttr      String?
   variantsJson String  @default("[]")
   costUsd      Float?
@@ -108,4 +110,19 @@ model Subcategory {
   fr         String
   categoryId Int
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
+
+model Seller {
+  id            Int      @id @default(autoincrement())
+  email         String   @unique
+  passwordHash  String
+  businessName  String
+  ownerName     String
+  phone         String
+  city          String?
+  description   String?
+  licenseInfo   String?
+  status        String   @default("PENDING")
+  rejectionNote String?
+  createdAt     DateTime @default(now())
 }

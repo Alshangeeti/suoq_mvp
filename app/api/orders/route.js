@@ -31,6 +31,14 @@ export async function POST(req) {
   }, 0);
   if (total <= 0) return NextResponse.json({ error: "Invalid cart" }, { status: 400 });
 
+  // Inventory-tracked products (local sellers): block overselling.
+  for (const i of items) {
+    const p = dbProducts.find((d) => d.id === i.id);
+    if (p && p.stockQty !== null && p.stockQty !== undefined && p.stockQty < Math.max(1, i.qty | 0)) {
+      return NextResponse.json({ error: "OUT_OF_STOCK", productId: p.id }, { status: 409 });
+    }
+  }
+
   const normalizedPhone = normalizePhone(phone);
 
   // Orders belong to the logged-in ACCOUNT regardless of which phone number
@@ -64,6 +72,17 @@ export async function POST(req) {
     }
   }
   if (!order) return NextResponse.json({ error: "Please try again" }, { status: 500 });
+
+  // Decrement tracked stock (guarded against races going negative).
+  for (const i of items) {
+    const p = dbProducts.find((d) => d.id === i.id);
+    if (p && p.stockQty !== null && p.stockQty !== undefined) {
+      await prisma.product.updateMany({
+        where: { id: p.id, stockQty: { gte: Math.max(1, i.qty | 0) } },
+        data: { stockQty: { decrement: Math.max(1, i.qty | 0) } }
+      }).catch(() => {});
+    }
+  }
   if (initialStatus === "COD") {
     autoPurchase(order.ref).catch(() => {});
   }

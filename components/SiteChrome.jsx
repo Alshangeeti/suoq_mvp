@@ -9,6 +9,23 @@ import BottomNav from "./BottomNav";
 export default function SiteChrome({ children }) {
   const pathname = usePathname();
   const isAdmin = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isSeller = pathname === "/seller" || pathname.startsWith("/seller/");
+
+  if (isSeller) {
+    return (
+      <div className="admin-shell min-h-screen bg-[#0d1f18] text-white" dir="rtl">
+        <header className="bg-[#092016] border-b border-white/10 sticky top-0 z-20">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-souq-gold text-souq-deep flex items-center justify-center font-black">
+              🏪
+            </span>
+            <span className="font-black">سوق موريتانيا — بوابة التجار</span>
+          </div>
+        </header>
+        <main className="max-w-6xl mx-auto px-4 pb-20">{children}</main>
+      </div>
+    );
+  }
 
   if (isAdmin) {
     return (
