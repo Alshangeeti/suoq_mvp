@@ -21,6 +21,11 @@ export default function ProductCard({ p }) {
     };
   }, [p.id]);
 
+  let hasChoices = false;
+  try {
+    hasChoices = JSON.parse(p.variantsJson || "[]").filter((v) => v && v.label).length > 1;
+  } catch {}
+
   const handleAdd = () => {
     addToCart(p);
     setAdded(true);
@@ -80,14 +85,23 @@ export default function ProductCard({ p }) {
           {p.stocked ? t("deliveryShortStocked") : t("deliveryShortOnDemand")}
         </span>
 
-        <button
-          onClick={handleAdd}
-          className={`mt-auto w-full text-xs font-bold rounded-full py-1.5 transition ${
-            added ? "bg-souq-gold text-souq-deep" : "bg-souq-green text-white hover:bg-souq-deep"
-          }`}
-        >
-          {added ? t("added") : t("addToCart")}
-        </button>
+        {hasChoices ? (
+          <Link
+            href={`/product/${p.id}`}
+            className="mt-auto w-full text-center text-xs font-bold rounded-full py-1.5 bg-souq-green text-white hover:bg-souq-deep transition"
+          >
+            {t("chooseOptions")}
+          </Link>
+        ) : (
+          <button
+            onClick={handleAdd}
+            className={`mt-auto w-full text-xs font-bold rounded-full py-1.5 transition ${
+              added ? "bg-souq-gold text-souq-deep" : "bg-souq-green text-white hover:bg-souq-deep"
+            }`}
+          >
+            {added ? t("added") : t("addToCart")}
+          </button>
+        )}
       </div>
     </div>
   );

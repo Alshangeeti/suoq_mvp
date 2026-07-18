@@ -23,6 +23,7 @@ model Product {
   imagesJson   String  @default("[]")
   aliexpressId String?
   skuAttr      String?
+  variantsJson String  @default("[]")
   costUsd      Float?
 }
 

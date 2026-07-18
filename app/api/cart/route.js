@@ -25,13 +25,17 @@ export async function PUT(req) {
     const qty = parseInt(i && i.qty, 10);
     const priceMru = parseInt(i && i.priceMru, 10);
     if (Number.isNaN(id) || Number.isNaN(qty) || qty < 1 || qty > 99) return [];
+    const skuAttr = typeof i.skuAttr === "string" ? i.skuAttr.slice(0, 300) : null;
     return [{
       id,
       qty,
+      key: `${id}|${skuAttr || ""}`,
       priceMru: Number.isNaN(priceMru) ? 0 : priceMru,
       nameAr: String(i.nameAr || "").slice(0, 200),
       nameFr: String(i.nameFr || "").slice(0, 200),
-      emoji: String(i.emoji || "").slice(0, 8)
+      emoji: String(i.emoji || "").slice(0, 8),
+      skuAttr,
+      variantLabel: typeof i.variantLabel === "string" ? i.variantLabel.slice(0, 120) : null
     }];
   });
   await prisma.customer.update({

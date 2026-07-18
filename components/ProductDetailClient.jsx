@@ -5,7 +5,7 @@ import { useStore } from "../lib/store";
 import ProductCard from "./ProductCard";
 import RecentlyViewed from "./RecentlyViewed";
 
-function ProductGallery({ product, name }) {
+function ProductGallery({ product, name, overrideImage }) {
   let images = [];
   try {
     images = JSON.parse(product.imagesJson || "[]");
@@ -24,7 +24,7 @@ function ProductGallery({ product, name }) {
   return (
     <div>
       <div className="bg-white rounded-3xl border border-souq-goldlight/60 overflow-hidden min-h-[280px] flex items-center justify-center">
-        <img src={images[active]} alt={name} className="w-full h-full object-contain max-h-[380px]" />
+        <img src={overrideImage || images[active]} alt={name} className="w-full h-full object-contain max-h-[380px]" />
       </div>
       {images.length > 1 && (
         <div className="flex gap-2 mt-3 overflow-x-auto">
@@ -50,6 +50,15 @@ export default function ProductDetailClient({ product, related, catInfo }) {
   const [added, setAdded] = useState(false);
   const timer = useRef(null);
 
+  let variants = [];
+  try {
+    variants = JSON.parse(product.variantsJson || "[]").filter((v) => v && v.attr);
+  } catch {}
+  const labeled = variants.filter((v) => v.label);
+  const hasChoices = labeled.length > 1;
+  const [variantIdx, setVariantIdx] = useState(0);
+  const selectedVariant = hasChoices ? labeled[variantIdx] : variants[0] || null;
+
   const name = lang === "ar" ? product.nameAr : product.nameFr;
   const desc = lang === "ar" ? product.descAr : product.descFr;
 
@@ -71,7 +80,7 @@ export default function ProductDetailClient({ product, related, catInfo }) {
   }, [product.id]);
 
   const handleAdd = () => {
-    addToCart(product, qty);
+    addToCart(product, qty, selectedVariant);
     setAdded(true);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setAdded(false), 1500);
@@ -101,7 +110,7 @@ export default function ProductDetailClient({ product, related, catInfo }) {
       </nav>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <ProductGallery product={product} name={name} />
+        <ProductGallery product={product} name={name} overrideImage={hasChoices && selectedVariant ? selectedVariant.image : null} />
 
         <div>
           <h1 className="text-2xl md:text-3xl font-black leading-snug">{name}</h1>
@@ -128,6 +137,28 @@ export default function ProductDetailClient({ product, related, catInfo }) {
           }`}>
             {product.stocked ? t("stocked") : t("onDemand")}
           </p>
+
+          {hasChoices && (
+            <div className="mt-5">
+              <p className="text-sm font-bold mb-2">{t("chooseVariant")}</p>
+              <div className="flex flex-wrap gap-2">
+                {labeled.map((v, i) => (
+                  <button
+                    key={v.attr}
+                    onClick={() => setVariantIdx(i)}
+                    className={`flex items-center gap-1.5 rounded-xl border-2 px-3 py-1.5 text-sm font-bold transition ${
+                      i === variantIdx ? "border-souq-green bg-souq-green/5 text-souq-green" : "border-souq-goldlight bg-white"
+                    }`}
+                  >
+                    {v.image && (
+                      <img src={v.image} alt="" className="w-6 h-6 rounded object-cover" />
+                    )}
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-6 flex items-center gap-4">
             <div className="flex items-center gap-2 bg-white border border-souq-goldlight rounded-full px-2 py-1">

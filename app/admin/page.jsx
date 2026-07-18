@@ -262,6 +262,7 @@ export default function AdminPage() {
         images: data.images || [],
         aliexpressId: data.productId,
         skuAttr: data.skuAttr || "",
+        variants: data.variants || [],
         costUsd: data.minPriceUsd || ""
       });
     } catch (e) {
@@ -459,7 +460,7 @@ export default function AdminPage() {
           <div className="mt-3 pt-3 border-t border-souq-goldlight/40 text-sm space-y-1">
             {items.map((it, idx) => (
               <div key={idx} className="flex justify-between text-souq-ink/80">
-                <span>{it.emoji} {it.nameFr || it.nameAr} × {it.qty}</span>
+                <span>{it.emoji} {it.nameFr || it.nameAr}{it.variantLabel ? ` (${it.variantLabel})` : ""} × {it.qty}</span>
                 <span>{(it.priceMru * it.qty).toLocaleString()} MRU</span>
               </div>
             ))}

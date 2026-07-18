@@ -32,6 +32,22 @@ async function cleanProduct(body) {
   }
   const aliexpressId = String(body.aliexpressId || "").trim().slice(0, 30) || null;
   const skuAttr = String(body.skuAttr || "").trim().slice(0, 300) || null;
+  let variantsJson = "[]";
+  if (Array.isArray(body.variants)) {
+    variantsJson = JSON.stringify(
+      body.variants
+        .filter((v) => v && typeof v.attr === "string" && v.attr)
+        .slice(0, 30)
+        .map((v) => ({
+          attr: String(v.attr).slice(0, 300),
+          label: String(v.label || "").slice(0, 120),
+          price: parseFloat(v.price) || 0,
+          image: typeof v.image === "string" && v.image.startsWith("http") ? v.image.slice(0, 500) : null
+        }))
+    );
+  } else if (typeof body.variantsJson === "string") {
+    variantsJson = body.variantsJson.slice(0, 20000);
+  }
   const costUsd = body.costUsd !== undefined && body.costUsd !== null && body.costUsd !== ""
     ? parseFloat(body.costUsd)
     : null;
@@ -40,7 +56,7 @@ async function cleanProduct(body) {
     nameAr, nameFr, descAr, descFr, priceMru,
     originalPriceMru: originalPriceMru && !Number.isNaN(originalPriceMru) && originalPriceMru > priceMru ? originalPriceMru : null,
     category, subcategory, emoji, stocked,
-    imageUrl, imagesJson, aliexpressId, skuAttr,
+    imageUrl, imagesJson, aliexpressId, skuAttr, variantsJson,
     costUsd: costUsd !== null && !Number.isNaN(costUsd) ? costUsd : null
   };
 }

@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { isAdmin } from "../../../../lib/adminAuth";
 import { getClient } from "../../../../lib/aliexpress";
+import { unwrapDetail, extractVariants } from "../../../../lib/aeParse";
 
 // Extracts a numeric AliExpress product ID from a pasted URL or raw ID.
 function parseProductId(input) {
@@ -88,7 +89,8 @@ export async function POST(req) {
       images: images.slice(0, 6),
       minPriceUsd: minPrice,
       maxPriceUsd: maxPrice,
-      skuAttr
+      skuAttr,
+      variants: extractVariants(r)
     });
   } catch (e) {
     return NextResponse.json({ error: String(e && e.message ? e.message : e) }, { status: 502 });

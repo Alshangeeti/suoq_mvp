@@ -20,22 +20,28 @@ export default function CartPage() {
     <div className="py-8 max-w-2xl mx-auto">
       <h1 className="text-2xl font-black text-souq-green mb-5">{t("cart")}</h1>
       <div className="space-y-3">
-        {cart.map((i) => (
-          <div key={i.id} className="bg-white rounded-2xl border border-souq-goldlight/60 p-4 flex items-center gap-4">
+        {cart.map((i) => {
+          const k = i.key || `${i.id}|${i.skuAttr || ""}`;
+          return (
+          <div key={k} className="bg-white rounded-2xl border border-souq-goldlight/60 p-4 flex items-center gap-4">
             <span className="text-3xl">{i.emoji}</span>
             <div className="flex-1">
               <p className="font-bold">{lang === "ar" ? i.nameAr : i.nameFr}</p>
+              {i.variantLabel && (
+                <p className="text-xs text-souq-ink/60 font-bold">{i.variantLabel}</p>
+              )}
               <p className="text-sm text-souq-green font-bold">
                 {i.priceMru.toLocaleString()} {t("mru")}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setQty(i.id, i.qty - 1)} aria-label="decrease quantity" className="w-8 h-8 rounded-full bg-souq-sand font-bold">−</button>
+              <button onClick={() => setQty(k, i.qty - 1)} aria-label="decrease quantity" className="w-8 h-8 rounded-full bg-souq-sand font-bold">−</button>
               <span className="w-6 text-center font-bold">{i.qty}</span>
-              <button onClick={() => setQty(i.id, i.qty + 1)} aria-label="increase quantity" className="w-8 h-8 rounded-full bg-souq-sand font-bold">+</button>
+              <button onClick={() => setQty(k, i.qty + 1)} aria-label="increase quantity" className="w-8 h-8 rounded-full bg-souq-sand font-bold">+</button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       <div className="mt-6 bg-souq-green text-white rounded-2xl p-5 flex items-center justify-between">
         <span className="font-bold">{t("total")}</span>

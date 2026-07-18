@@ -6,6 +6,7 @@ import { isAdmin } from "../../../../lib/adminAuth";
 import { getClient } from "../../../../lib/aliexpress";
 import { IMPORT_PLAN } from "../../../../lib/importPlan";
 import { slugify } from "../../../../lib/categories";
+import { extractVariants } from "../../../../lib/aeParse";
 
 const RATE = parseFloat(process.env.MRU_PER_USD || "40");
 const MARKUP = 1.2;
@@ -192,6 +193,9 @@ export async function POST(req) {
           imagesJson: JSON.stringify(images),
           aliexpressId: id,
           skuAttr: chosen.attr || null,
+          variantsJson: JSON.stringify(extractVariants(r).map((v) => ({
+            attr: v.attr, label: v.label, price: v.price, image: v.image
+          }))),
           costUsd: chosen.price
         }
       });

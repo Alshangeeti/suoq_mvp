@@ -69,16 +69,40 @@ export function StoreProvider({ children }) {
 
   const t = (k) => dict[lang][k] || k;
 
-  const addToCart = (product, qty = 1) =>
+  // Cart items are keyed by product + chosen variant, so two colors of the
+  // same product are separate lines.
+  const itemKey = (id, skuAttr) => `${id}|${skuAttr || ""}`;
+
+  const addToCart = (product, qty = 1, variant = null) =>
     setCart((c) => {
       const n = Math.max(1, Math.min(99, qty | 0));
-      const found = c.find((i) => i.id === product.id);
-      if (found) return c.map((i) => (i.id === product.id ? { ...i, qty: Math.min(99, i.qty + n) } : i));
-      return [...c, { id: product.id, nameAr: product.nameAr, nameFr: product.nameFr, priceMru: product.priceMru, emoji: product.emoji, qty: n }];
+      const key = itemKey(product.id, variant && variant.attr);
+      const found = c.find((i) => (i.key || itemKey(i.id, i.skuAttr)) === key);
+      if (found)
+        return c.map((i) =>
+          (i.key || itemKey(i.id, i.skuAttr)) === key ? { ...i, qty: Math.min(99, i.qty + n) } : i
+        );
+      return [
+        ...c,
+        {
+          key,
+          id: product.id,
+          nameAr: product.nameAr,
+          nameFr: product.nameFr,
+          priceMru: product.priceMru,
+          emoji: product.emoji,
+          skuAttr: variant ? variant.attr : null,
+          variantLabel: variant ? variant.label : null,
+          qty: n
+        }
+      ];
     });
 
-  const setQty = (id, qty) =>
-    setCart((c) => (qty <= 0 ? c.filter((i) => i.id !== id) : c.map((i) => (i.id === id ? { ...i, qty } : i))));
+  const setQty = (key, qty) =>
+    setCart((c) => {
+      const k = (i) => i.key || itemKey(i.id, i.skuAttr);
+      return qty <= 0 ? c.filter((i) => k(i) !== key) : c.map((i) => (k(i) === key ? { ...i, qty } : i));
+    });
 
   const clearCart = () => setCart([]);
   const total = cart.reduce((s, i) => s + i.priceMru * i.qty, 0);
