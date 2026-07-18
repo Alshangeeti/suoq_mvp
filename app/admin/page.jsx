@@ -790,8 +790,25 @@ export default function AdminPage() {
                       )}
                       <div className="flex-1 min-w-[160px]">
                         <p className="font-bold text-sm">{p.nameFr} · {p.nameAr}</p>
-                        <p className="text-xs text-souq-ink/50">{p.category}{p.subcategory ? ` / ${p.subcategory}` : ""} · {p.stocked ? "stocked" : "on-demand"}</p>
+                        <p className="text-xs text-souq-ink/50">
+                          {p.category}{p.subcategory ? ` / ${p.subcategory}` : ""} · {p.stocked ? "stocked" : "on-demand"}
+                          {p.costUsd ? ` · cost $${p.costUsd}` : ""}
+                        </p>
                       </div>
+                      {p.aliexpressId ? (
+                        <a
+                          href={`https://www.aliexpress.com/item/${p.aliexpressId}.html`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-bold bg-souq-gold/20 border border-souq-gold text-souq-deep rounded-full px-3 py-1"
+                        >
+                          AE ↗
+                        </a>
+                      ) : (
+                        <span className="text-[10px] font-bold text-souq-ink/30 border border-souq-goldlight/50 rounded-full px-2 py-1">
+                          no AE link
+                        </span>
+                      )}
                       <div className="flex items-center gap-1">
                         <input
                           type="number"
