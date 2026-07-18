@@ -16,7 +16,10 @@ export async function GET(req) {
   const orders = await prisma.order.findMany({
     orderBy: { createdAt: "desc" },
     take: 500,
-    select: { ref: true, status: true, fulfillmentStatus: true, itemsJson: true, createdAt: true }
+    select: {
+      ref: true, status: true, fulfillmentStatus: true, itemsJson: true, createdAt: true,
+      customerName: true, phone: true, city: true, address: true
+    }
   });
 
   let soldQty = 0;
@@ -34,16 +37,26 @@ export async function GET(req) {
         revenue += it.priceMru * it.qty;
         if (o.fulfillmentStatus !== "DELIVERED") pendingQty += it.qty;
       }
-      if (sales.length < 30) {
+      if (sales.length < 50) {
+        const confirmed2 = o.status === "PAID" || o.status === "COD";
         sales.push({
           ref: o.ref,
           date: o.createdAt,
           name: it.nameAr || it.nameFr,
           variant: it.variantLabel || "",
           qty: it.qty,
+          priceMru: it.priceMru,
+          emoji: it.emoji,
+          nameAr: it.nameAr,
+          nameFr: it.nameFr,
+          variantLabel: it.variantLabel || null,
           amount: it.priceMru * it.qty,
           status: o.status,
-          fulfillment: o.fulfillmentStatus
+          fulfillment: o.fulfillmentStatus,
+          // Customer details only once the order is confirmed (for delivery slips)
+          ...(confirmed2
+            ? { customerName: o.customerName, phone: o.phone, city: o.city, address: o.address }
+            : {})
         });
       }
     }

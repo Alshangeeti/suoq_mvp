@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { openShippingSlip } from "../../lib/slip";
 
 const EMPTY_PRODUCT = {
   id: null, nameAr: "", nameFr: "", descAr: "", descFr: "",
@@ -376,6 +377,23 @@ export default function AdminPage() {
           <span className={`text-xs font-bold rounded-full px-3 py-1 ${STATUS_BADGE[o.status] || "bg-souq-goldlight"}`}>
             {o.status}
           </span>
+          <button
+            onClick={() =>
+              openShippingSlip({
+                ref: o.ref,
+                date: o.createdAt,
+                customerName: o.customerName,
+                phone: o.phone,
+                city: o.city,
+                address: o.address,
+                items,
+                totalMru: o.totalMru
+              })
+            }
+            className="text-xs font-bold border border-souq-goldlight text-souq-ink/70 rounded-full px-3 py-1"
+          >
+            🖨 Slip
+          </button>
           {verification ? (
             <>
               <button onClick={() => patchOrder(o.ref, { action: "approvePayment" })} className="text-xs font-bold bg-souq-green text-white rounded-full px-3 py-1">

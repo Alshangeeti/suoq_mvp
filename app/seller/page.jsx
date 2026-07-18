@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { openShippingSlip } from "../../lib/slip";
 
 const EMPTY = { id: null, nameAr: "", nameFr: "", descAr: "", descFr: "", priceMru: "", stockQty: "", category: "", subcategory: "", imageUrl: "" };
 
@@ -337,6 +338,30 @@ export default function SellerPortal() {
               <span className={`text-xs font-bold rounded-full px-2 py-0.5 ${s.status === "PAID" || s.status === "COD" ? "bg-souq-green/10 text-souq-green" : "bg-souq-gold/20 text-souq-deep"}`}>
                 {s.status === "PAID" || s.status === "COD" ? (s.fulfillment === "DELIVERED" ? "تم التسليم" : "مؤكد") : "بانتظار الدفع"}
               </span>
+              {s.customerName && (
+                <button
+                  onClick={() => {
+                    const sameOrder = sales.filter((x) => x.ref === s.ref && x.customerName);
+                    openShippingSlip({
+                      ref: s.ref,
+                      date: s.date,
+                      customerName: s.customerName,
+                      phone: s.phone,
+                      city: s.city,
+                      address: s.address,
+                      items: sameOrder.map((x) => ({
+                        nameAr: x.nameAr, nameFr: x.nameFr, variantLabel: x.variantLabel,
+                        qty: x.qty, priceMru: x.priceMru, emoji: x.emoji
+                      })),
+                      totalMru: sameOrder.reduce((t, x) => t + x.amount, 0),
+                      seller: seller.businessName
+                    });
+                  }}
+                  className="text-xs font-bold border border-souq-green text-souq-green rounded-full px-3 py-1"
+                >
+                  🖨 بوليصة الشحن
+                </button>
+              )}
             </div>
           ))}
           {sales.length === 0 && <p className="text-center text-white/50 py-8">لا مبيعات بعد</p>}

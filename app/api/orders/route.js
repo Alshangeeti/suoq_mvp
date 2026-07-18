@@ -7,11 +7,20 @@ import { isAdmin } from "../../../lib/adminAuth";
 import { METHOD_IDS, methodMode } from "../../../lib/payments";
 import { autoPurchase } from "../../../lib/autofulfill";
 
-function makeRef() {
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  let s = "";
-  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return "SM-" + s;
+// Order numbers: LO (local — every item from a local seller) or GO (global —
+// anything sourced from China, or mixed), + year + sequence starting at 01.
+// Example: LO202601, GO202614.
+async function makeRef(items, dbProducts, attempt) {
+  const allLocal =
+    items.length > 0 &&
+    items.every((i) => {
+      const p = dbProducts.find((d) => d.id === i.id);
+      return p && p.sellerId !== null && p.sellerId !== undefined;
+    });
+  const prefix = (allLocal ? "LO" : "GO") + new Date().getFullYear();
+  const count = await prisma.order.count({ where: { ref: { startsWith: prefix } } });
+  const seq = count + 1 + attempt;
+  return prefix + String(seq).padStart(2, "0");
 }
 
 export async function POST(req) {
@@ -54,7 +63,7 @@ export async function POST(req) {
     try {
       order = await prisma.order.create({
         data: {
-          ref: makeRef(),
+          ref: await makeRef(items, dbProducts, attempt),
           customerName,
           phone: normalizedPhone,
           city: city || "Nouakchott",
