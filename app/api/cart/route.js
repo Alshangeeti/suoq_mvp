@@ -34,6 +34,7 @@ export async function PUT(req) {
       nameAr: String(i.nameAr || "").slice(0, 200),
       nameFr: String(i.nameFr || "").slice(0, 200),
       emoji: String(i.emoji || "").slice(0, 8),
+      imageUrl: typeof i.imageUrl === "string" && i.imageUrl.startsWith("http") ? i.imageUrl.slice(0, 500) : null,
       skuAttr,
       variantLabel: typeof i.variantLabel === "string" ? i.variantLabel.slice(0, 120) : null
     }];

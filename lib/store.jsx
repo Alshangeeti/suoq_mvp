@@ -91,6 +91,7 @@ export function StoreProvider({ children }) {
           nameFr: product.nameFr,
           priceMru: product.priceMru,
           emoji: product.emoji,
+          imageUrl: (variant && variant.image) || product.imageUrl || null,
           skuAttr: variant ? variant.attr : null,
           variantLabel: variant ? variant.label : null,
           qty: n

@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useStore } from "../../lib/store";
+import { thumb } from "../../lib/img";
 
 export default function CartPage() {
   const { t, lang, cart, setQty, total } = useStore();
@@ -23,21 +24,25 @@ export default function CartPage() {
         {cart.map((i) => {
           const k = i.key || `${i.id}|${i.skuAttr || ""}`;
           return (
-          <div key={k} className="bg-white rounded-2xl border border-souq-goldlight/60 p-4 flex items-center gap-4">
-            <span className="text-3xl">{i.emoji}</span>
-            <div className="flex-1">
-              <p className="font-bold">{lang === "ar" ? i.nameAr : i.nameFr}</p>
+          <div key={k} className="bg-white rounded-2xl border border-souq-goldlight/60 p-3 flex items-center gap-3">
+            {i.imageUrl ? (
+              <img src={thumb(i.imageUrl, 150)} alt="" loading="lazy" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+            ) : (
+              <span className="text-2xl w-14 text-center shrink-0">{i.emoji}</span>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm leading-snug line-clamp-2">{lang === "ar" ? i.nameAr : i.nameFr}</p>
               {i.variantLabel && (
-                <p className="text-xs text-souq-ink/60 font-bold">{i.variantLabel}</p>
+                <p className="text-[11px] text-souq-ink/60 font-bold">{i.variantLabel}</p>
               )}
               <p className="text-sm text-souq-green font-bold">
                 {i.priceMru.toLocaleString()} {t("mru")}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setQty(k, i.qty - 1)} aria-label="decrease quantity" className="w-8 h-8 rounded-full bg-souq-sand font-bold">−</button>
-              <span className="w-6 text-center font-bold">{i.qty}</span>
-              <button onClick={() => setQty(k, i.qty + 1)} aria-label="increase quantity" className="w-8 h-8 rounded-full bg-souq-sand font-bold">+</button>
+              <button onClick={() => setQty(k, i.qty - 1)} aria-label="decrease quantity" className="w-7 h-7 rounded-full bg-souq-sand font-bold text-sm">−</button>
+              <span className="w-5 text-center font-bold text-sm">{i.qty}</span>
+              <button onClick={() => setQty(k, i.qty + 1)} aria-label="increase quantity" className="w-7 h-7 rounded-full bg-souq-sand font-bold text-sm">+</button>
             </div>
           </div>
           );
