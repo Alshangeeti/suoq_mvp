@@ -69,27 +69,48 @@ export async function POST(req) {
     const { catSlug, subSlug } = await ensureCategory(entry);
     const client = await getClient();
 
-    const searchResp = await client.callAPIDirectly("aliexpress.ds.text.search", {
-      keyWord: entry.kw,
-      countryCode: "CN",
-      currency: "USD",
-      local: "fr_FR",
-      pageSize: 20,
-      pageIndex: page,
-      sortBy: "orders,desc"
-    });
+    // Search the Mauritanian market first (goods still get ORDERED to the
+    // Guangzhou warehouse later); fall back to FR/US market indexes if a
+    // keyword returns nothing for MR.
+    let products = null;
+    let sawZero = false;
+    let lastRaw = null;
+    for (const cc of ["MR", "FR", "US"]) {
+      const searchResp = await client.callAPIDirectly("aliexpress.ds.text.search", {
+        keyWord: entry.kw,
+        countryCode: cc,
+        currency: "USD",
+        local: "fr_FR",
+        pageSize: 20,
+        pageIndex: page,
+        sortBy: "orders,desc"
+      });
+      const data = searchResp && searchResp.data ? searchResp.data : {};
+      const env2 = data.aliexpress_ds_text_search_response || data;
+      const inner = env2.data || env2;
+      const total = parseInt(firstDefined(inner.totalCount, inner.total_count, "-1"), 10);
+      const arr = findProductArray(inner);
+      if (arr && arr.length > 0) {
+        products = arr;
+        break;
+      }
+      if (total === 0 || (arr && arr.length === 0)) {
+        sawZero = true;
+        continue;
+      }
+      lastRaw = JSON.stringify(searchResp).slice(0, 900);
+    }
 
-    const products = findProductArray(searchResp && searchResp.data ? searchResp.data : {});
     if (!products) {
+      if (sawZero) {
+        return NextResponse.json({ added: 0, exhausted: true });
+      }
       return NextResponse.json({
         added: 0,
         exhausted: true,
         error: "SEARCH_PARSE",
-        raw: JSON.stringify(searchResp).slice(0, 900)
+        raw: lastRaw || "no data"
       });
-    }
-    if (products.length === 0) {
-      return NextResponse.json({ added: 0, exhausted: true });
     }
 
     let added = 0;
@@ -112,7 +133,7 @@ export async function POST(req) {
       try {
         detail = await client.productDetails({
           product_id: Number(id),
-          ship_to_country: "CN",
+          ship_to_country: "MR",
           target_currency: "USD",
           target_language: "ar"
         });
