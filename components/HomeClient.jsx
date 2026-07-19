@@ -11,6 +11,11 @@ export default function HomeClient({ tree = [], initialItems = null, initialTota
   const catName = (item) => (lang === "ar" ? item.ar : item.fr);
 
   useEffect(() => {
+    setQuery(initialQuery);
+    setDebouncedQ(initialQuery);
+  }, [initialQuery]);
+
+  useEffect(() => {
     const id = setTimeout(() => setDebouncedQ(query.trim()), 400);
     return () => clearTimeout(id);
   }, [query]);
