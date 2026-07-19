@@ -85,6 +85,16 @@ export async function PUT(req) {
 export async function DELETE(req) {
   if (!isAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
+
+  // Bulk-delete every AliExpress-sourced product (keeps local-seller and
+  // manually-added products untouched).
+  if (body.action === "deleteAllAe") {
+    const result = await prisma.product.deleteMany({
+      where: { aliexpressId: { not: null }, sellerId: null }
+    });
+    return NextResponse.json({ ok: true, deleted: result.count });
+  }
+
   const id = parseInt(body.id, 10);
   if (Number.isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   await prisma.product.delete({ where: { id } });

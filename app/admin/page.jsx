@@ -30,10 +30,7 @@ export default function AdminPage() {
   const [rejecting, setRejecting] = useState(null); // order ref being rejected
   const [rejectReason, setRejectReason] = useState("PAYMENT_NOT_COMPLETED");
   const [rejectNote, setRejectNote] = useState("");
-  const [aeUrl, setAeUrl] = useState("");
-  const [aePreview, setAePreview] = useState(null);
-  const [aeError, setAeError] = useState("");
-  const [aeBusy, setAeBusy] = useState(false);
+  const [aeCleanupMsg, setAeCleanupMsg] = useState("");
   const [catImages, setCatImages] = useState({});
   const [catImgCategory, setCatImgCategory] = useState("");
   const [catImgSaved, setCatImgSaved] = useState("");
@@ -46,10 +43,6 @@ export default function AdminPage() {
   const [prodPage, setProdPage] = useState(1);
   const [inlinePrices, setInlinePrices] = useState({});
   const [sellers, setSellers] = useState([]);
-  const [bulkRunning, setBulkRunning] = useState(false);
-  const [bulkLog, setBulkLog] = useState([]);
-  const [bulkTotal, setBulkTotal] = useState(0);
-  const bulkStopRef = { current: false };
 
   const load = async (k = key) => {
     setError("");
@@ -206,89 +199,20 @@ export default function AdminPage() {
     setRejectReason("PAYMENT_NOT_COMPLETED");
   };
 
-  const runBulkImport = async () => {
-    if (bulkRunning) {
-      window.__souqBulkStop = true;
-      return;
-    }
-    window.__souqBulkStop = false;
-    setBulkRunning(true);
-    setBulkLog([]);
-    setBulkTotal(0);
-    const pushLog = (line) => setBulkLog((prev) => [...prev.slice(-120), line]);
-    let grandTotal = 0;
-    try {
-      const planRes = await fetch("/api/categories");
-      pushLog("Starting bulk import — keep this page open.");
-      const PLAN_SIZE = 31;
-      for (let i = 0; i < PLAN_SIZE; i++) {
-        if (window.__souqBulkStop) break;
-        let addedForEntry = 0;
-        let page = 1;
-        let target = 999;
-        while (!window.__souqBulkStop && addedForEntry < target && page <= 12) {
-          const res = await fetch("/api/admin/bulk-import", {
-            method: "POST",
-            headers: { "x-admin-key": key, "Content-Type": "application/json" },
-            body: JSON.stringify({ planIndex: i, page, need: 8 })
-          });
-          const data = await res.json().catch(() => ({}));
-          if (data.entryCount) target = data.entryCount;
-          if (data.entryTarget) target = data.entryTarget;
-          if (!res.ok || data.error) {
-            pushLog(`⚠ group ${i + 1}: ${data.error || res.status}${data.raw ? " | " + data.raw.slice(0, 200) : ""}`);
-            break;
-          }
-          addedForEntry += data.added || 0;
-          grandTotal += data.added || 0;
-          setBulkTotal(grandTotal);
-          if (data.added > 0) pushLog(`group ${i + 1} p${page}: +${data.added} (total ${grandTotal})`);
-          if (data.exhausted) break;
-          page = data.nextPage || page + 1;
-          if (target === 999) target = 25;
-        }
-      }
-      pushLog(window.__souqBulkStop ? `Stopped. Imported ${grandTotal} products.` : `Done. Imported ${grandTotal} products.`);
-    } catch (e) {
-      pushLog("Fatal: " + String(e.message || e));
-    } finally {
-      setBulkRunning(false);
+  const deleteAllAe = async () => {
+    if (!confirm("Delete ALL AliExpress-imported products? Local-seller and manual products are kept.")) return;
+    setAeCleanupMsg("");
+    const res = await fetch("/api/admin/products", {
+      method: "DELETE",
+      headers: { "x-admin-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "deleteAllAe" })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setAeCleanupMsg(`Deleted ${data.deleted} products`);
       load();
-    }
-  };
-
-  const fetchAePreview = async () => {
-    setAeError("");
-    setAePreview(null);
-    setAeBusy(true);
-    try {
-      const res = await fetch("/api/admin/aliexpress", {
-        method: "POST",
-        headers: { "x-admin-key": key, "Content-Type": "application/json" },
-        body: JSON.stringify({ url: aeUrl })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-      setAePreview(data);
-      // Pre-fill the product form from the preview
-      setForm({
-        ...EMPTY_PRODUCT,
-        nameFr: data.title || "",
-        nameAr: "",
-        descFr: data.title || "",
-        descAr: "",
-        priceMru: "",
-        imageUrl: data.images && data.images[0] ? data.images[0] : "",
-        images: data.images || [],
-        aliexpressId: data.productId,
-        skuAttr: data.skuAttr || "",
-        variants: data.variants || [],
-        costUsd: data.minPriceUsd || ""
-      });
-    } catch (e) {
-      setAeError(String(e.message || e));
-    } finally {
-      setAeBusy(false);
+    } else {
+      setAeCleanupMsg(data.error || "Failed");
     }
   };
 
@@ -579,71 +503,22 @@ export default function AdminPage() {
 
       {tab === "products" && (
         <div className="space-y-6">
-          <div className="bg-white text-souq-ink rounded-2xl border-2 border-souq-green/60 p-4">
-            <h2 className="font-black mb-1">📦 Bulk import — Mauritania plan (~500 products)</h2>
+          <div className="bg-white text-souq-ink rounded-2xl border-2 border-red-300 p-4">
+            <h2 className="font-black mb-1">🧹 AliExpress cleanup</h2>
             <p className="text-xs text-souq-ink/60 mb-3">
-              Imports popular, low-cost AliExpress products across 31 Mauritania-focused groups (phone accessories,
-              solar lamps, tea sets, abayas, fans, tools...). China-stocked variants preferred, prices set at cost × 1.2.
-              Runs in batches — keep this page open; you can stop anytime.
+              AliExpress can't ship to China, so the store is moving to 1688 sourcing. This removes all
+              AliExpress-imported products (local-seller and manually-added products are kept).
             </p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={runBulkImport}
-                className={`font-bold rounded-full px-6 py-2 ${bulkRunning ? "bg-red-600 text-white" : "bg-souq-green text-white"}`}
-              >
-                {bulkRunning ? "■ Stop" : "▶ Start bulk import"}
-              </button>
-              {bulkTotal > 0 && <span className="font-black text-souq-green">{bulkTotal} imported</span>}
-            </div>
-            {bulkLog.length > 0 && (
-              <pre className="mt-3 bg-souq-sand rounded-xl p-3 text-[11px] leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap" dir="ltr">
-                {bulkLog.join("\n")}
-              </pre>
-            )}
+            <button
+              onClick={deleteAllAe}
+              className="font-bold rounded-full px-6 py-2 bg-red-600 text-white"
+            >
+              Delete all AliExpress products
+            </button>
+            {aeCleanupMsg && <span className="ms-3 font-bold text-souq-green">{aeCleanupMsg}</span>}
           </div>
 
-          <div className="bg-white text-souq-ink rounded-2xl border-2 border-souq-gold/60 p-4">
-            <h2 className="font-black mb-1">🔗 Import from AliExpress</h2>
-            <p className="text-xs text-souq-ink/60 mb-3">
-              Paste a product link — title, photos and cost auto-fill below. Set your MRU price and Arabic name, then add.
-              {" "}<a href="/callback" className="underline font-bold">Connection status</a>
-            </p>
-            <div className="flex gap-2">
-              <input
-                value={aeUrl}
-                onChange={(e) => setAeUrl(e.target.value)}
-                placeholder="https://www.aliexpress.com/item/100500...html"
-                className="flex-1 rounded-xl border border-souq-goldlight px-3 py-2 text-sm"
-                dir="ltr"
-              />
-              <button
-                disabled={aeBusy || !aeUrl.trim()}
-                onClick={fetchAePreview}
-                className="bg-souq-gold text-souq-deep font-bold rounded-xl px-5 py-2 disabled:opacity-50"
-              >
-                {aeBusy ? "..." : "Fetch"}
-              </button>
-            </div>
-            {aeError && <p className="text-red-600 text-sm font-bold mt-2 whitespace-pre-wrap">{aeError}</p>}
-            {aePreview && (
-              <div className="mt-3 flex flex-wrap items-center gap-3 bg-souq-sand rounded-xl p-3">
-                {aePreview.images && aePreview.images[0] && (
-                  <img src={aePreview.images[0]} alt="" className="w-16 h-16 rounded-lg object-cover" />
-                )}
-                <div className="flex-1 min-w-[150px]">
-                  <p className="text-sm font-bold leading-snug">{aePreview.title}</p>
-                  <p className="text-xs text-souq-ink/60 mt-0.5">
-                    Cost: {aePreview.minPriceUsd != null ? `$${aePreview.minPriceUsd}` : "?"}
-                    {aePreview.maxPriceUsd != null && aePreview.maxPriceUsd !== aePreview.minPriceUsd ? ` – $${aePreview.maxPriceUsd}` : ""}
-                    {" · "}{aePreview.images ? aePreview.images.length : 0} photos · ID {aePreview.productId}
-                  </p>
-                  <p className="text-xs text-souq-green font-bold mt-1">✓ Form below pre-filled — set price &amp; Arabic name, then Add product</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-4">
+                    <div className="bg-white text-souq-ink rounded-2xl border border-souq-goldlight/60 p-4">
             <h2 className="font-black mb-3">{form.id ? `Edit product #${form.id}` : "Add product"}</h2>
             <div className="grid md:grid-cols-2 gap-3">
               <input value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} placeholder="Name (Arabic)" dir="rtl" className="rounded-xl border border-souq-goldlight px-3 py-2" />
